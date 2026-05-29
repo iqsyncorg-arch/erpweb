@@ -34,7 +34,6 @@ import {
   Truck,
   Factory,
   Info,
-  User,
   BookOpen,
   Calendar,
   Briefcase,
