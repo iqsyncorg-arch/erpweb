@@ -44,8 +44,7 @@ import {
   Globe,
   CheckCircle,
   Plus,
-  Minus,
-  MessageSquare
+  Minus
 } from 'lucide-react';
 
 export default function App() {
@@ -1397,11 +1396,7 @@ function HomeContent({
         </svg>
       </a>
 
-      {/* Floating "Talk to Expert" Banner */}
-      <button className="floating-talk-expert open-contact-btn" onClick={openContactModal}>
-        <MessageSquare />
-        <span>Talk to our expert!</span>
-      </button>
+
 
       {/* Modal Contact Form Popup */}
       <div className={`modal-overlay ${isContactModalOpen ? 'active' : ''}`} id="contactModal">

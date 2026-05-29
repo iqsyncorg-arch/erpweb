@@ -33,7 +33,6 @@ import {
   Phone,
   Globe,
   CheckCircle,
-  MessageSquare,
   ArrowRight,
   Target,
   Award
@@ -597,10 +596,7 @@ export default function AboutUs() {
         </svg>
       </a>
 
-      <button className="floating-talk-expert open-contact-btn" onClick={openContactModal}>
-        <MessageSquare />
-        <span>Consult an Expert</span>
-      </button>
+
 
       {/* Modal Contact Form Popup */}
       <div className={`modal-overlay ${isContactModalOpen ? 'active' : ''}`} id="contactModal">
