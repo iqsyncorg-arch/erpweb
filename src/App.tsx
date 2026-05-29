@@ -516,7 +516,7 @@ function HomeContent({
 
             <div className="case-study-card">
               <div className="case-study-details">
-                <span className="case-tag">INDUSTRIAL LOGISTICS & TESTING</span>
+
                 <h3>2X Improved Digital Presence for USA’s Prominent Industrial Testing & Inspection Company</h3>
                 <p>We engineered a highly robust Cloud dashboard with deep analytics and real-time field data processing. The solution modernized their entire field inspector workflow, reducing reporting turnaround times.</p>
                 <div className="stats-row">
