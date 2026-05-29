@@ -34,6 +34,7 @@ import {
   Truck,
   Factory,
   Info,
+  User,
   BookOpen,
   Calendar,
   Briefcase,
@@ -1490,6 +1491,6 @@ function HomeContent({
           </div>
         </div>
       </div>
-          </>
+    </>
   );
 }
