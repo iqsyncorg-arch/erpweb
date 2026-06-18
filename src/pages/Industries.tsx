@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import { BRAND_LOGO_URL, BRAND_LOGO_HEADER_URL, BRAND_ALT } from '../constants/brand';
 import {
   ChevronDown,
   Cpu,
@@ -238,13 +239,8 @@ export default function Industries() {
       <header className={`header ${isScrolled ? 'scrolled' : ''}`}>
         <div className="header-container">
           {/* Corporate Logo Block */}
-          <Link to="/" className="logo" id="logoLink" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
-            <span className="logo-icon">
-              <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-              </svg>
-            </span>
-            <span className="logo-text">ERP<span> HUB</span></span>
+          <Link to="/" className="logo logo-brand-image" id="logoLink">
+            <img src={BRAND_LOGO_HEADER_URL} alt={BRAND_ALT} className="logo-image" />
           </Link>
 
           {/* Main Navigation Links (Desktop) */}
@@ -380,8 +376,8 @@ export default function Industries() {
       {/* Mobile Navigation Sidebar */}
       <div className={`mobile-nav-sidebar ${isMobileMenuOpen ? 'active' : ''}`} id="mobileNavSidebar">
         <div className="mobile-nav-header">
-          <Link to="/" className="logo" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-            <span className="logo-text">ERP<span> HUB</span></span>
+          <Link to="/" className="logo logo-brand-image">
+            <img src={BRAND_LOGO_HEADER_URL} alt={BRAND_ALT} className="logo-image logo-image-sm" />
           </Link>
           <button className="close-sidebar-btn" id="closeSidebarBtn" onClick={() => setIsMobileMenuOpen(false)}>
             <X />
@@ -463,7 +459,7 @@ export default function Industries() {
                   </span>
                 </h1>
                 <p style={{ fontSize: '1.15rem', color: '#94a3b8', lineHeight: 1.7, marginBottom: '32px' }}>
-                  At ERP HUB, we understand that off-the-shelf software solutions often fail to handle core workflow requirements. We create reliable, high-performance, compliant web and mobile ecosystems specialized for your target sector.
+                  At ERP Digital Solution, we understand that off-the-shelf software solutions often fail to handle core workflow requirements. We create reliable, high-performance, compliant web and mobile ecosystems specialized for your target sector.
                 </p>
                 <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                   <button className="btn btn-primary" onClick={openContactModal} style={{ backgroundColor: activeIndustry.color, color: '#061024' }}>
@@ -672,7 +668,7 @@ export default function Industries() {
               High-Availability Blueprint
             </h2>
             <p className="text-center" style={{ maxWidth: '600px', margin: '0 auto 60px', color: '#cbd5e1', lineHeight: 1.6 }}>
-              Visualizing the underlying microservices layer configured by ERP HUB for {activeIndustry.name} clients.
+              Visualizing the underlying microservices layer configured by ERP Digital Solution for {activeIndustry.name} clients.
             </p>
 
             <div style={{
@@ -782,10 +778,10 @@ export default function Industries() {
       <footer className="footer">
         <div className="footer-top-container">
           <div className="footer-bio">
-            <Link to="/" className="logo" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', marginBottom: '16px' }}>
-              <span className="logo-text">ERP<span> HUB</span></span>
+            <Link to="/" className="logo logo-brand-image">
+              <img src={BRAND_LOGO_URL} alt={BRAND_ALT} className="logo-image logo-image-footer" />
             </Link>
-            <p>ERP HUB Technologies designs, manages, and scales high-performance enterprise platforms and dedicated product lifecycles across major industrial tech corridors.</p>
+            <p>ERP Digital Solution designs, manages, and scales high-performance enterprise platforms and dedicated product lifecycles across major industrial tech corridors.</p>
           </div>
           <div className="footer-badges">
             <h4>INTEGRATION &amp; PARTNER NETWORK</h4>
@@ -883,7 +879,7 @@ export default function Industries() {
         </div>
 
         <div className="footer-copyright">
-          <p>&copy; 2026 ERP HUB Technologies. All Rights Reserved. | www.erphubtechnologies.com</p>
+          <p>&copy; 2026 ERP Digital Solution. All Rights Reserved. | www.erphubtechnologies.com</p>
           <div className="legal-links">
             <a href="#">Terms &amp; Conditions</a>
             <span className="divider">|</span>
@@ -980,7 +976,7 @@ export default function Industries() {
               <div className="success-message active" id="successMessage">
                 <div className="success-icon"><CheckCircle /></div>
                 <h3>Briefing Received</h3>
-                <p>Your institutional discovery requirements have been securely recorded. An executive architecture representative from ERP HUB Technologies will connect with your management channel within 24 business hours.</p>
+                <p>Your institutional discovery requirements have been securely recorded. An executive architecture representative from ERP Digital Solution will connect with your management channel within 24 business hours.</p>
                 <button className="btn btn-primary" id="successCloseBtn" onClick={closeContactModal}>Dismiss Window</button>
               </div>
             )}

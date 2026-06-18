@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { BRAND_LOGO_URL, BRAND_LOGO_HEADER_URL, BRAND_ALT } from '../constants/brand';
 import {
   ChevronDown,
   Cpu,
@@ -18,12 +19,8 @@ import {
   PlayCircle,
   X,
   Landmark,
-  Umbrella,
   ShoppingCart,
   GraduationCap,
-  Activity,
-  Zap,
-  Truck,
   Factory,
   Info,
   BookOpen,
@@ -35,7 +32,9 @@ import {
   CheckCircle,
   ArrowRight,
   Target,
-  Award
+  Award,
+  BarChart3,
+  RefreshCw
 } from 'lucide-react';
 
 export default function AboutUs() {
@@ -44,7 +43,7 @@ export default function AboutUs() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mobileSubmenus, setMobileSubmenus] = useState<{ [key: string]: boolean }>({
     services: false,
-    industries: false,
+    products: false,
     whoWeAre: false,
   });
 
@@ -116,20 +115,8 @@ export default function AboutUs() {
         <div className="header-container">
 
           {/* Corporate Logo Block - Updated with Image */}
-          <Link to="/" className="logo" id="logoLink" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
-            <img
-              src="/assets/logo.png"
-              alt="ERP HUB Technologies"
-              className="logo-image"
-              style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
-              onError={(e) => {
-                // Fallback text if the image path is broken
-                e.currentTarget.style.display = 'none';
-                const sibling = e.currentTarget.nextElementSibling as HTMLElement;
-                if (sibling) sibling.style.display = 'flex';
-              }}
-            />
-            <span className="logo-text">ERP<span> HUB</span></span>
+          <Link to="/" className="logo logo-brand-image" id="logoLink">
+            <img src={BRAND_LOGO_HEADER_URL} alt={BRAND_ALT} className="logo-image" />
           </Link>
 
           {/* Main Navigation Links (Desktop) */}
@@ -184,26 +171,26 @@ export default function AboutUs() {
                 <Link to="/#tech-stack-section" className="nav-link">Technologies</Link>
               </li>
 
-              {/* Industries Dropdown */}
+              {/* Products Dropdown */}
               <li className="nav-item has-dropdown">
-                <a href="#" className="nav-link">Industries <ChevronDown className="chevron-icon" /></a>
+                <a href="#" className="nav-link">Products <ChevronDown className="chevron-icon" /></a>
                 <div className="mega-menu mega-menu-2col">
                   <div className="mega-col">
-                    <h3>Core Industries</h3>
+                    <h3>Core Products</h3>
                     <ul>
-                      <li><Link to="/industries/fintech-banking"><Landmark className="menu-icon" /> Fintech & Banking</Link></li>
-                      <li><Link to="/industries/insurance"><Umbrella className="menu-icon" /> Insurance</Link></li>
-                      <li><Link to="/industries/ecommerce"><ShoppingCart className="menu-icon" /> E-commerce</Link></li>
-                      <li><Link to="/industries/education"><GraduationCap className="menu-icon" /> Education</Link></li>
-                      <li><Link to="/industries/healthcare"><Activity className="menu-icon" /> Healthcare</Link></li>
+                      <li><Link to="/products/erp-suite"><Factory className="menu-icon" /> ERP Suite</Link></li>
+                      <li><a href="#"><Briefcase className="menu-icon" /> CRM Platform</a></li>
+                      <li><a href="#"><GraduationCap className="menu-icon" /> HRMS & Payroll</a></li>
+                      <li><a href="#"><ShoppingCart className="menu-icon" /> Inventory Management</a></li>
+                      <li><a href="#"><Landmark className="menu-icon" /> Accounting & Finance</a></li>
                     </ul>
                   </div>
                   <div className="mega-col">
-                    <h3>Enterprise Sectors</h3>
+                    <h3>Enterprise Products</h3>
                     <ul>
-                      <li><a href="#"><Zap className="menu-icon" /> Energy & Utility</a></li>
-                      <li><a href="#"><Truck className="menu-icon" /> Logistics & SCM</a></li>
-                      <li><a href="#"><Factory className="menu-icon" /> Manufacturing</a></li>
+                      <li><a href="#"><Workflow className="menu-icon" /> ServiceNow Solutions</a></li>
+                      <li><a href="#"><BarChart3 className="menu-icon" /> BI & Analytics</a></li>
+                      <li><a href="#"><RefreshCw className="menu-icon" /> Workflow Automation</a></li>
                     </ul>
                   </div>
                 </div>
@@ -258,9 +245,8 @@ export default function AboutUs() {
       {/* Mobile Navigation Sidebar */}
       <div className={`mobile-nav-sidebar ${isMobileMenuOpen ? 'active' : ''}`} id="mobileNavSidebar">
         <div className="mobile-nav-header">
-          <Link to="/" className="logo" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-            <img src="/assets/logo.png" alt="ERP HUB" className="logo-image" style={{ height: '28px', width: 'auto' }} />
-            <span className="logo-text">ERP<span> HUB</span></span>
+          <Link to="/" className="logo logo-brand-image">
+            <img src={BRAND_LOGO_HEADER_URL} alt={BRAND_ALT} className="logo-image logo-image-sm" />
           </Link>
           <button className="close-sidebar-btn" id="closeSidebarBtn" onClick={() => setIsMobileMenuOpen(false)}>
             <X />
@@ -289,18 +275,19 @@ export default function AboutUs() {
               <Link to="/#tech-stack-section" onClick={() => setIsMobileMenuOpen(false)}>Technologies</Link>
             </li>
             <li className="mobile-nav-item">
-              <button className="mobile-dropdown-toggle" onClick={() => toggleMobileSubmenu('industries')}>
-                Industries
-                <ChevronDown style={{ transform: mobileSubmenus.industries ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease' }} />
+              <button className="mobile-dropdown-toggle" onClick={() => toggleMobileSubmenu('products')}>
+                Products
+                <ChevronDown style={{ transform: mobileSubmenus.products ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease' }} />
               </button>
-              <ul className={`mobile-dropdown-menu ${mobileSubmenus.industries ? 'active' : ''}`}>
-                <li><Link to="/industries/fintech-banking" onClick={() => setIsMobileMenuOpen(false)}>Fintech & Banking</Link></li>
-                <li><Link to="/industries/insurance" onClick={() => setIsMobileMenuOpen(false)}>Insurance</Link></li>
-                <li><Link to="/industries/ecommerce" onClick={() => setIsMobileMenuOpen(false)}>E-commerce</Link></li>
-                <li><Link to="/industries/education" onClick={() => setIsMobileMenuOpen(false)}>Education</Link></li>
-                <li><Link to="/industries/healthcare" onClick={() => setIsMobileMenuOpen(false)}>Healthcare</Link></li>
-                <li><Link to="/" onClick={() => setIsMobileMenuOpen(false)}>Logistics & SCM</Link></li>
-                <li><Link to="/" onClick={() => setIsMobileMenuOpen(false)}>Manufacturing</Link></li>
+              <ul className={`mobile-dropdown-menu ${mobileSubmenus.products ? 'active' : ''}`}>
+                <li><Link to="/products/erp-suite" onClick={() => setIsMobileMenuOpen(false)}>ERP Suite</Link></li>
+                <li><a href="#" onClick={() => setIsMobileMenuOpen(false)}>CRM Platform</a></li>
+                <li><a href="#" onClick={() => setIsMobileMenuOpen(false)}>HRMS & Payroll</a></li>
+                <li><a href="#" onClick={() => setIsMobileMenuOpen(false)}>Inventory Management</a></li>
+                <li><a href="#" onClick={() => setIsMobileMenuOpen(false)}>Accounting & Finance</a></li>
+                <li><a href="#" onClick={() => setIsMobileMenuOpen(false)}>ServiceNow Solutions</a></li>
+                <li><a href="#" onClick={() => setIsMobileMenuOpen(false)}>BI & Analytics</a></li>
+                <li><a href="#" onClick={() => setIsMobileMenuOpen(false)}>Workflow Automation</a></li>
               </ul>
             </li>
             <li className="mobile-nav-item">
@@ -322,7 +309,7 @@ export default function AboutUs() {
         </div>
       </div>
 
-      <main>
+      <main className="about-page">
         {/* ==========================================
             EDITORIAL HERO SECTION 
             Replaces the generic text blob with a split layout
@@ -331,14 +318,13 @@ export default function AboutUs() {
           <div className="section-container">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '60px', alignItems: 'center' }}>
               <div>
-                <span className="section-tag" style={{ letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--color-accent-gold)', display: 'block', marginBottom: '16px', fontWeight: 600 }}>Corporate Profile</span>
                 <h1 style={{ fontSize: '3.5rem', fontWeight: 800, lineHeight: 1.1, marginBottom: '24px', color: '#fff' }}>
                   Engineering the <br />
                   <span className="gradient-text" style={{ background: 'linear-gradient(135deg, #fff 0%, var(--color-accent-gold) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Digital Infrastructure</span> <br />
                   of Next-Gen Enterprise.
                 </h1>
                 <p style={{ fontSize: '1.15rem', color: '#94a3b8', lineHeight: 1.7, marginBottom: '32px' }}>
-                  ERP HUB Technologies designs, deploys, and scales high-performance custom application ecosystems. We bridge complex enterprise operational bottlenecks with fluid web, mobile, and cloud environments built for sustainable competitive edge.
+                  ERP Digital Solution designs, deploys, and scales high-performance custom application ecosystems. We bridge complex enterprise operational bottlenecks with fluid web, mobile, and cloud environments built for sustainable competitive edge.
                 </p>
                 <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                   <button className="btn btn-primary" onClick={openContactModal} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
@@ -347,18 +333,13 @@ export default function AboutUs() {
                 </div>
               </div>
 
-              <div style={{ position: 'relative' }}>
+              <div>
                 <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
                   <img
                     src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80"
                     alt="Corporate Tech Infrastructure"
                     style={{ width: '100%', height: '500px', objectFit: 'cover', display: 'block' }}
                   />
-                </div>
-                {/* Floating Metric Badge */}
-                <div style={{ position: 'absolute', bottom: '-24px', left: '-24px', background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '24px', maxWidth: '240px' }}>
-                  <span style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--color-accent-gold)', display: 'block', lineHeight: 1 }}>100%</span>
-                  <span style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '4px', display: 'block', fontWeight: 500, letterSpacing: '0.5px' }}>SLA adherence across mid-market deliverables.</span>
                 </div>
               </div>
             </div>
@@ -368,7 +349,7 @@ export default function AboutUs() {
         {/* ==========================================
             CORE CORPORATE MISSION & VISION
         ========================================== */}
-        <section className="vision-mission-section" style={{ padding: '100px 0', background: 'rgba(15, 23, 42, 0.6)' }}>
+        <section className="vision-mission-section" style={{ padding: '100px 0', background: '#0b0f19' }}>
           <div className="section-container">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '40px' }}>
               <div style={{ background: 'linear-gradient(180deg, rgba(30,41,59,0.5) 0%, rgba(15,23,42,0) 100%)', border: '1px solid rgba(255,255,255,0.05)', padding: '48px', borderRadius: '12px' }}>
@@ -397,9 +378,8 @@ export default function AboutUs() {
         {/* ==========================================
             VALUE PROPOSITIONS (Replaces "Why Choose Us")
         ========================================== */}
-        <section className="why-choose-section-inner" style={{ padding: '100px 0' }}>
+        <section className="why-choose-section-inner" style={{ padding: '100px 0', background: '#0b0f19' }}>
           <div className="section-container">
-            <span className="section-tag text-center" style={{ display: 'block', margin: '0 auto 16px', textAlign: 'center' }}>Value Propositions</span>
             <h2 className="text-center" style={{ fontSize: '2.5rem', fontWeight: 800, color: '#fff', marginBottom: '16px', textAlign: 'center' }}>Architectural Pillars</h2>
             <p className="text-center" style={{ maxWidth: '600px', margin: '0 auto 60px', color: '#94a3b8', textAlign: 'center', lineHeight: 1.6 }}>
               How we differentiate execution from typical baseline software implementations.
@@ -431,9 +411,8 @@ export default function AboutUs() {
         {/* ==========================================
             REGIONAL PRESENCE / HUB MATRIX
         ========================================== */}
-        <section className="locations-section" style={{ padding: '100px 0', background: 'rgba(15, 23, 42, 0.6)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        <section className="locations-section" style={{ padding: '100px 0', background: '#0b0f19', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           <div className="section-container">
-            <span className="section-tag text-center" style={{ display: 'block', margin: '0 auto 16px', textAlign: 'center' }}>Operating Footprint</span>
             <h2 className="text-center" style={{ fontSize: '2.5rem', fontWeight: 800, color: '#fff', marginBottom: '16px', textAlign: 'center' }}>Regional Technical Hubs</h2>
             <p className="section-subtitle text-center" style={{ maxWidth: '600px', margin: '0 auto 60px', color: '#94a3b8', textAlign: 'center', lineHeight: 1.6 }}>
               On-site technical support matrix and regional office coordinates.
@@ -444,7 +423,7 @@ export default function AboutUs() {
               <div className="location-card" style={{ background: '#1e293b', padding: '40px', borderRadius: '8px', borderLeft: '4px solid var(--color-accent-gold)' }}>
                 <div className="location-header" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', color: '#fff' }}>
                   <MapPin style={{ color: 'var(--color-accent-gold)' }} />
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Chennai (HQ)</h3>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: '#fff' }}>Chennai (HQ)</h3>
                 </div>
                 <p className="address" style={{ color: '#94a3b8', lineHeight: 1.6, marginBottom: '24px' }}>Tamil Nadu, India</p>
                 <a href="tel:+919344096860" className="location-phone" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#fff', textDecoration: 'none', fontWeight: 600 }}><Phone size={16} /> +91 93440 96860</a>
@@ -454,7 +433,7 @@ export default function AboutUs() {
               <div className="location-card" style={{ background: '#1e293b', padding: '40px', borderRadius: '8px', borderLeft: '4px solid var(--color-accent-gold)' }}>
                 <div className="location-header" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', color: '#fff' }}>
                   <MapPin style={{ color: 'var(--color-accent-gold)' }} />
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Bengaluru Office</h3>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: '#fff' }}>Bengaluru Office</h3>
                 </div>
                 <p className="address" style={{ color: '#94a3b8', lineHeight: 1.6, marginBottom: '24px' }}>Karnataka, India</p>
                 <a href="tel:+917010509381" className="location-phone" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#fff', textDecoration: 'none', fontWeight: 600 }}><Phone size={16} /> +91 70105 09381</a>
@@ -464,7 +443,7 @@ export default function AboutUs() {
               <div className="location-card" style={{ background: '#1e293b', padding: '40px', borderRadius: '8px', borderLeft: '4px solid var(--color-accent-gold)' }}>
                 <div className="location-header" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', color: '#fff' }}>
                   <MapPin style={{ color: 'var(--color-accent-gold)' }} />
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Hyderabad Network</h3>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: '#fff' }}>Hyderabad Network</h3>
                 </div>
                 <p className="address" style={{ color: '#94a3b8', lineHeight: 1.6, marginBottom: '24px' }}>Telangana, India</p>
                 <a href="mailto:ceo@erphubtechnologies.com" className="location-phone" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#fff', textDecoration: 'none', fontWeight: 600 }}><Globe size={16} /> ceo@erphubtechnologies.com</a>
@@ -478,11 +457,10 @@ export default function AboutUs() {
       <footer className="footer">
         <div className="footer-top-container">
           <div className="footer-bio">
-            <Link to="/" className="logo" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', marginBottom: '16px' }}>
-              <img src="/assets/logo.png" alt="ERP HUB" className="logo-image" style={{ height: '32px', width: 'auto' }} />
-              <span className="logo-text">ERP<span> HUB</span></span>
+            <Link to="/" className="logo logo-brand-image">
+              <img src={BRAND_LOGO_URL} alt={BRAND_ALT} className="logo-image logo-image-footer" />
             </Link>
-            <p>ERP HUB Technologies designs, manages, and scales high-performance enterprise platforms and dedicated product lifecycles across major industrial tech corridors.</p>
+            <p>ERP Digital Solution designs, manages, and scales high-performance enterprise platforms and dedicated product lifecycles across major industrial tech corridors.</p>
           </div>
           <div className="footer-badges">
             <h4>INTEGRATION &amp; PARTNER NETWORK</h4>
@@ -580,7 +558,7 @@ export default function AboutUs() {
         </div>
 
         <div className="footer-copyright">
-          <p>&copy; 2026 ERP HUB Technologies. All Rights Reserved. | www.erphubtechnologies.com</p>
+          <p>&copy; 2026 ERP Digital Solution. All Rights Reserved. | www.erphubtechnologies.com</p>
           <div className="legal-links">
             <a href="#">Terms &amp; Conditions</a>
             <span className="divider">|</span>
@@ -677,7 +655,7 @@ export default function AboutUs() {
               <div className="success-message active" id="successMessage">
                 <div className="success-icon"><CheckCircle /></div>
                 <h3>Briefing Received</h3>
-                <p>Your institutional discovery requirements have been securely recorded. An executive architecture representative from ERP HUB Technologies will connect with your management channel within 24 business hours.</p>
+                <p>Your institutional discovery requirements have been securely recorded. An executive architecture representative from ERP Digital Solution will connect with your management channel within 24 business hours.</p>
                 <button className="btn btn-primary" id="successCloseBtn" onClick={closeContactModal}>Dismiss Window</button>
               </div>
             )}

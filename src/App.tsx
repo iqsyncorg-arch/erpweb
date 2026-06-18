@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
 import AboutUs from './pages/AboutUs';
+import ErpSuite from './pages/ErpSuite';
+import { BRAND_LOGO_URL, BRAND_LOGO_HEADER_URL, BRAND_ALT } from './constants/brand';
 import {
   ChevronDown,
   Cpu,
@@ -53,7 +55,7 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mobileSubmenus, setMobileSubmenus] = useState<{ [key: string]: boolean }>({
     services: false,
-    industries: false,
+    products: false,
     whoWeAre: false,
   });
 
@@ -167,6 +169,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/about" element={<AboutUs />} />
+      <Route path="/products/erp-suite" element={<ErpSuite />} />
       <Route path="/" element={<HomeContent
         isScrolled={isScrolled}
         isMobileMenuOpen={isMobileMenuOpen}
@@ -240,14 +243,9 @@ function HomeContent({
       <header className={`header ${isScrolled ? 'scrolled' : ''}`}>
         <div className="header-container">
           {/* Logo */}
-          <a href="#" className="logo" id="logoLink">
-            <span className="logo-icon">
-              <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-              </svg>
-            </span>
-            <span className="logo-text">ERP<span> HUB</span></span>
-          </a>
+          <Link to="/" className="logo logo-brand-image" id="logoLink">
+            <img src={BRAND_LOGO_HEADER_URL} alt={BRAND_ALT} className="logo-image" />
+          </Link>
 
           {/* Main Navigation Links (Desktop) */}
           <nav className="nav-menu">
@@ -302,26 +300,26 @@ function HomeContent({
                 <a href="#tech-stack-section" className="nav-link">Technologies</a>
               </li>
 
-              {/* Industries Dropdown */}
+              {/* Products Dropdown */}
               <li className="nav-item has-dropdown">
-                <a href="#" className="nav-link">Industries <ChevronDown className="chevron-icon" /></a>
+                <a href="#products-section" className="nav-link">Products <ChevronDown className="chevron-icon" /></a>
                 <div className="mega-menu mega-menu-2col">
                   <div className="mega-col">
-                    <h3>Core Industries</h3>
+                    <h3>Core Products</h3>
                     <ul>
-                      <li><a href="#"><Landmark className="menu-icon" /> Fintech & Banking</a></li>
-                      <li><a href="#"><Umbrella className="menu-icon" /> Insurance</a></li>
-                      <li><a href="#"><ShoppingCart className="menu-icon" /> E-commerce</a></li>
-                      <li><a href="#"><GraduationCap className="menu-icon" /> Education</a></li>
-                      <li><a href="#"><Activity className="menu-icon" /> Healthcare</a></li>
+                      <li><Link to="/products/erp-suite"><Factory className="menu-icon" /> ERP Suite</Link></li>
+                      <li><a href="#products-section"><Briefcase className="menu-icon" /> CRM Platform</a></li>
+                      <li><a href="#products-section"><GraduationCap className="menu-icon" /> HRMS & Payroll</a></li>
+                      <li><a href="#products-section"><ShoppingCart className="menu-icon" /> Inventory Management</a></li>
+                      <li><a href="#products-section"><Landmark className="menu-icon" /> Accounting & Finance</a></li>
                     </ul>
                   </div>
                   <div className="mega-col">
-                    <h3>Enterprise Sectors</h3>
+                    <h3>Enterprise Products</h3>
                     <ul>
-                      <li><a href="#"><Zap className="menu-icon" /> Energy & Utility</a></li>
-                      <li><a href="#"><Truck className="menu-icon" /> Logistics & SCM</a></li>
-                      <li><a href="#"><Factory className="menu-icon" /> Manufacturing</a></li>
+                      <li><a href="#products-section"><Workflow className="menu-icon" /> ServiceNow Solutions</a></li>
+                      <li><a href="#products-section"><BarChart3 className="menu-icon" /> BI & Analytics</a></li>
+                      <li><a href="#products-section"><RefreshCw className="menu-icon" /> Workflow Automation</a></li>
                     </ul>
                   </div>
                 </div>
@@ -376,14 +374,9 @@ function HomeContent({
       {/* Mobile Navigation Sidebar */}
       <div className={`mobile-nav-sidebar ${isMobileMenuOpen ? 'active' : ''}`} id="mobileNavSidebar">
         <div className="mobile-nav-header">
-          <a href="#" className="logo">
-            <span className="logo-icon">
-              <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-              </svg>
-            </span>
-            <span className="logo-text">ERP<span> HUB</span></span>
-          </a>
+          <Link to="/" className="logo logo-brand-image">
+            <img src={BRAND_LOGO_HEADER_URL} alt={BRAND_ALT} className="logo-image logo-image-sm" />
+          </Link>
           <button className="close-sidebar-btn" id="closeSidebarBtn" onClick={() => setIsMobileMenuOpen(false)}>
             <X />
           </button>
@@ -411,18 +404,19 @@ function HomeContent({
               <a href="#tech-stack-section" onClick={() => setIsMobileMenuOpen(false)}>Technologies</a>
             </li>
             <li className="mobile-nav-item">
-              <button className="mobile-dropdown-toggle" onClick={() => toggleMobileSubmenu('industries')}>
-                Industries
-                <ChevronDown style={{ transform: mobileSubmenus.industries ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease' }} />
+              <button className="mobile-dropdown-toggle" onClick={() => toggleMobileSubmenu('products')}>
+                Products
+                <ChevronDown style={{ transform: mobileSubmenus.products ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease' }} />
               </button>
-              <ul className={`mobile-dropdown-menu ${mobileSubmenus.industries ? 'active' : ''}`}>
-                <li><a href="#" onClick={() => setIsMobileMenuOpen(false)}>Fintech & Banking</a></li>
-                <li><a href="#" onClick={() => setIsMobileMenuOpen(false)}>Insurance</a></li>
-                <li><a href="#" onClick={() => setIsMobileMenuOpen(false)}>E-commerce</a></li>
-                <li><a href="#" onClick={() => setIsMobileMenuOpen(false)}>Education</a></li>
-                <li><a href="#" onClick={() => setIsMobileMenuOpen(false)}>Healthcare</a></li>
-                <li><a href="#" onClick={() => setIsMobileMenuOpen(false)}>Logistics & SCM</a></li>
-                <li><a href="#" onClick={() => setIsMobileMenuOpen(false)}>Manufacturing</a></li>
+              <ul className={`mobile-dropdown-menu ${mobileSubmenus.products ? 'active' : ''}`}>
+                <li><Link to="/products/erp-suite" onClick={() => setIsMobileMenuOpen(false)}>ERP Suite</Link></li>
+                <li><a href="#products-section" onClick={() => setIsMobileMenuOpen(false)}>CRM Platform</a></li>
+                <li><a href="#products-section" onClick={() => setIsMobileMenuOpen(false)}>HRMS & Payroll</a></li>
+                <li><a href="#products-section" onClick={() => setIsMobileMenuOpen(false)}>Inventory Management</a></li>
+                <li><a href="#products-section" onClick={() => setIsMobileMenuOpen(false)}>Accounting & Finance</a></li>
+                <li><a href="#products-section" onClick={() => setIsMobileMenuOpen(false)}>ServiceNow Solutions</a></li>
+                <li><a href="#products-section" onClick={() => setIsMobileMenuOpen(false)}>BI & Analytics</a></li>
+                <li><a href="#products-section" onClick={() => setIsMobileMenuOpen(false)}>Workflow Automation</a></li>
               </ul>
             </li>
             <li className="mobile-nav-item">
@@ -447,14 +441,29 @@ function HomeContent({
       <main>
         {/* Hero Section */}
         <section className="hero-section">
+          <div className="hero-video-bg" aria-hidden="true">
+            <video
+              className="hero-video"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+            >
+              <source
+                src="https://res.cloudinary.com/dq6gr5zjc/video/upload/v1781795502/Title_Modern_Software_Company_pliacq.mp4"
+                type="video/mp4"
+              />
+            </video>
+            <div className="hero-video-overlay" />
+          </div>
           <div className="hero-container">
             <div className="hero-content">
-              <span className="hero-tag">ENTERPRISE TECH COMPANY</span>
               <h1 className="hero-title">
                 Empowering Businesses with <span className="gradient-text">Custom Digital Solutions</span>
               </h1>
               <p className="hero-subtitle">
-                ERP HUB Technologies delivers innovative web, mobile, and software development solutions for startups, enterprises, and growing businesses across industries.
+                ERP Digital Solution delivers innovative web, mobile, and software development solutions for startups, enterprises, and growing businesses across industries.
               </p>
               <div className="hero-cta-pills">
                 <a href="#" className="pill-link"><span className="pulse-dot"></span> AI Solutions</a>
@@ -466,40 +475,79 @@ function HomeContent({
                 <a href="#case-studies-section" className="btn btn-secondary btn-large">View Success Stories</a>
               </div>
             </div>
-            <div className="hero-graphics">
-              <div className="graphics-wrapper">
-                <img src="/hero_illustration.png" alt="AI-driven Software Architecture Illustration" className="hero-img" />
-                <div className="glowing-orb"></div>
-              </div>
-            </div>
           </div>
         </section>
 
-        {/* Growth & Partners Section */}
+        {/* Growth Section */}
         <section className="growth-section">
+          <div className="growth-bg-decor" aria-hidden="true">
+            <div className="growth-orb growth-orb-1" />
+            <div className="growth-orb growth-orb-2" />
+            <div className="growth-grid-pattern" />
+          </div>
           <div className="section-container">
-            <div className="growth-content">
+            <div className="growth-layout">
               <div className="growth-text">
-                <h2>Transform Your Business with Scalable Digital Solutions</h2>
-                <p className="section-subtitle">Helping startups, enterprises, and growing businesses build reliable digital products.</p>
-                <p className="body-desc">
-                  ERP HUB Technologies is a technology-driven company specializing in web development, mobile application development, and customized software solutions. Our goal is to build reliable digital products that not only solve current business challenges but also support long-term growth and scalability.
+                <h2>
+                  Transform Your Business with{' '}
+                  <span className="gradient-text-dark">Scalable Digital Solutions</span>
+                </h2>
+                <p className="growth-lead">
+                  Helping startups, enterprises, and growing businesses build reliable digital products.
                 </p>
-                <button className="btn btn-accent open-contact-btn" onClick={openContactModal}>
+                <p className="body-desc">
+                  ERP Digital Solution is a technology-driven company specializing in web development, mobile application development, and customized software solutions. Our goal is to build reliable digital products that not only solve current business challenges but also support long-term growth and scalability.
+                </p>
+
+                <div className="growth-pill-row">
+                  <span className="growth-pill"><CheckCircle size={14} /> Web & Mobile</span>
+                  <span className="growth-pill"><CheckCircle size={14} /> Custom ERP</span>
+                  <span className="growth-pill"><CheckCircle size={14} /> Cloud-Ready</span>
+                </div>
+
+                <button className="btn btn-accent open-contact-btn growth-cta-btn" onClick={openContactModal}>
                   Book a 30-min Product Discovery Call <ArrowRight className="btn-arrow" />
                 </button>
               </div>
-              <div className="partners-grid-container">
-                <h3>TRUSTED BY INDUSTRY LEADERS</h3>
-                <div className="partners-logo-grid">
-                  <div className="partner-logo-card"><span>TAI Services</span></div>
-                  <div className="partner-logo-card"><span>Trepp</span></div>
-                  <div className="partner-logo-card"><span>peoplestrong</span></div>
-                  <div className="partner-logo-card"><span>KFC</span></div>
-                  <div className="partner-logo-card"><span>adani</span></div>
-                  <div className="partner-logo-card"><span>GlobalBees</span></div>
-                  <div className="partner-logo-card"><span>IndiGo</span></div>
-                  <div className="partner-logo-card"><span>Cover-More</span></div>
+
+              <div className="growth-visual">
+                <div className="growth-visual-card growth-visual-card-main">
+                  <div className="growth-visual-card-header">
+                    <span className="growth-visual-dot" />
+                    <span className="growth-visual-dot" />
+                    <span className="growth-visual-dot" />
+                    <span className="growth-visual-label">ERP Digital Solution Delivery Stack</span>
+                  </div>
+                  <div className="growth-capability-list">
+                    <div className="growth-capability-item">
+                      <div className="growth-capability-icon"><Layers /></div>
+                      <div>
+                        <h4>Web Development</h4>
+                        <p>Responsive, performance-tuned platforms</p>
+                      </div>
+                    </div>
+                    <div className="growth-capability-item">
+                      <div className="growth-capability-icon"><Smartphone /></div>
+                      <div>
+                        <h4>Mobile Engineering</h4>
+                        <p>Native & cross-platform app ecosystems</p>
+                      </div>
+                    </div>
+                    <div className="growth-capability-item">
+                      <div className="growth-capability-icon"><Cpu /></div>
+                      <div>
+                        <h4>Custom Software</h4>
+                        <p>Tailored systems for domain workflows</p>
+                      </div>
+                    </div>
+                    <div className="growth-capability-item">
+                      <div className="growth-capability-icon"><Cloud /></div>
+                      <div>
+                        <h4>Cloud & DevOps</h4>
+                        <p>Scalable deployment pipelines</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -509,7 +557,6 @@ function HomeContent({
         {/* Featured Case Studies Section */}
         <section className="case-studies-section" id="case-studies-section">
           <div className="section-container">
-            <span className="section-tag text-center">SUCCESS STORIES</span>
             <h2 className="text-center">Featured Case Studies</h2>
             <p className="section-subtitle text-center">Real-world impact delivered through custom tech engineering.</p>
 
@@ -542,7 +589,7 @@ function HomeContent({
                     <span className="circle red"></span>
                     <span className="circle yellow"></span>
                     <span className="circle green"></span>
-                    <span className="mockup-title">ERPdigital Dashboard</span>
+                    <span className="mockup-title">ERP Digital Solution Dashboard</span>
                   </div>
                   <div className="mockup-body">
                     <div className="mockup-sidebar">
@@ -579,7 +626,6 @@ function HomeContent({
         {/* Our Services Section */}
         <section className="services-section">
           <div className="section-container">
-            <span className="section-tag text-center">OUR SERVICES</span>
             <h2 className="text-center">Powering Innovation with AI-Driven Solutions Built for Speed and Precision</h2>
             <p className="section-subtitle text-center">We help clients transform visionary ideas into reality by providing future-ready software solutions, boosting client growth with impeccable software solutions and services. Here are some of our offerings:</p>
 
@@ -646,6 +692,82 @@ function HomeContent({
                 <h3>Cloud Deployment</h3>
                 <p>Design, deploy, configure, and scale robust containerized microservices architectures on AWS, Azure, and GCP.</p>
                 <a href="#" className="service-link open-contact-btn" onClick={openContactModal}>Learn More <ChevronRight /></a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Products Section */}
+        <section className="products-section" id="products-section">
+          <div className="section-container">
+            <h2 className="text-center text-white">Enterprise Products Built for Scale</h2>
+            <p className="section-subtitle text-center text-light">
+              Ready-to-deploy platforms and modular suites engineered for mid-market operations across education, finance, and enterprise workflows.
+            </p>
+
+            <div className="product-featured-card">
+              <div className="product-featured-visual">
+                <img src="/assets/products/erp-suite/dashboard.png" alt="EduPlatform ERP Suite dashboard" />
+              </div>
+              <div className="product-featured-content">
+                <span className="product-featured-badge">Flagship Product</span>
+                <h3>EduPlatform ERP Suite</h3>
+                <p>
+                  All-in-one institute management system with 5 dedicated login portals, 15+ integrated modules, AI-powered insights, and a built-in LMS — built for owners, sales teams, trainers, students, and staff.
+                </p>
+                <ul className="product-featured-highlights">
+                  <li><CheckCircle size={16} /> Multi-login architecture with RBAC</li>
+                  <li><CheckCircle size={16} /> AI lead scoring & revenue forecasting</li>
+                  <li><CheckCircle size={16} /> CRM, LMS, attendance & batch management</li>
+                </ul>
+                <Link to="/products/erp-suite" className="btn btn-primary">
+                  Explore ERP Suite <ArrowRight className="btn-arrow" />
+                </Link>
+              </div>
+            </div>
+
+            <div className="products-grid">
+              <div className="product-card">
+                <div className="product-card-icon"><Briefcase /></div>
+                <h3>CRM Platform</h3>
+                <p>Pipeline management, lead tracking, and customer engagement tools tailored to your sales workflow.</p>
+                <a href="#" className="product-card-link open-contact-btn" onClick={openContactModal}>Learn More <ChevronRight /></a>
+              </div>
+              <div className="product-card">
+                <div className="product-card-icon"><GraduationCap /></div>
+                <h3>HRMS & Payroll</h3>
+                <p>End-to-end workforce management with payroll automation, attendance, and compliance reporting.</p>
+                <a href="#" className="product-card-link open-contact-btn" onClick={openContactModal}>Learn More <ChevronRight /></a>
+              </div>
+              <div className="product-card">
+                <div className="product-card-icon"><ShoppingCart /></div>
+                <h3>Inventory Management</h3>
+                <p>Real-time stock tracking, warehouse routing, and demand forecasting across your supply chain.</p>
+                <a href="#" className="product-card-link open-contact-btn" onClick={openContactModal}>Learn More <ChevronRight /></a>
+              </div>
+              <div className="product-card">
+                <div className="product-card-icon"><Landmark /></div>
+                <h3>Accounting & Finance</h3>
+                <p>Ledger management, invoicing, tax compliance, and financial dashboards for growing businesses.</p>
+                <a href="#" className="product-card-link open-contact-btn" onClick={openContactModal}>Learn More <ChevronRight /></a>
+              </div>
+              <div className="product-card">
+                <div className="product-card-icon"><Workflow /></div>
+                <h3>ServiceNow Solutions</h3>
+                <p>ITSM, ITOM, and asset management implementations configured for enterprise service delivery.</p>
+                <a href="#" className="product-card-link open-contact-btn" onClick={openContactModal}>Learn More <ChevronRight /></a>
+              </div>
+              <div className="product-card">
+                <div className="product-card-icon"><BarChart3 /></div>
+                <h3>BI & Analytics</h3>
+                <p>Interactive dashboards, predictive analytics, and data pipelines that turn metrics into decisions.</p>
+                <a href="#" className="product-card-link open-contact-btn" onClick={openContactModal}>Learn More <ChevronRight /></a>
+              </div>
+              <div className="product-card">
+                <div className="product-card-icon"><RefreshCw /></div>
+                <h3>Workflow Automation</h3>
+                <p>Automate approvals, notifications, and cross-system processes with configurable workflow engines.</p>
+                <a href="#" className="product-card-link open-contact-btn" onClick={openContactModal}>Learn More <ChevronRight /></a>
               </div>
             </div>
           </div>
@@ -852,9 +974,8 @@ function HomeContent({
         {/* Industries We Serve Section */}
         <section className="industries-section">
           <div className="section-container">
-            <span className="section-tag text-center light">VERTICAL SOLUTIONS</span>
             <h2 className="text-center text-white">Revolutionizing Industries With Tech That Breaks Barriers</h2>
-            <p className="section-subtitle text-center text-light">Over the years, ERP HUB Technologies has worked on developing robust solutions for complex business problems across healthcare, education, fintech, and more.</p>
+            <p className="section-subtitle text-center text-light">Over the years, ERP Digital Solution has worked on developing robust solutions for complex business problems across healthcare, education, fintech, and more.</p>
 
             <div className="industries-grid">
               {/* Industry 1 */}
@@ -912,7 +1033,6 @@ function HomeContent({
         {/* Testimonials Section */}
         <section className="testimonials-section">
           <div className="section-container">
-            <span className="section-tag text-center">CLIENT CORNER</span>
             <h2 className="text-center">What Our Clients Say About Their Transformative Journeys</h2>
             <p className="section-subtitle text-center">We've served more than 300 clients globally in the last 8 years and retained 95% of them.</p>
 
@@ -929,7 +1049,7 @@ function HomeContent({
                     <Star className="fill" />
                     <Star className="fill" />
                   </div>
-                  <p className="testimonial-text">"ERP HUB Technologies delivered our CRM integration ahead of schedule. Their team integrated seamlessly with our workflows and automated our lead management process."</p>
+                  <p className="testimonial-text">"ERP Digital Solution delivered our CRM integration ahead of schedule. Their team integrated seamlessly with our workflows and automated our lead management process."</p>
                   <div className="testimonial-author">
                     <div className="author-info">
                       <h4>Gautam Chowdhary</h4>
@@ -967,7 +1087,7 @@ function HomeContent({
                     <Star className="fill" />
                     <Star className="fill" />
                   </div>
-                  <p className="testimonial-text">"The UI/UX design workshop helped align our product roadmap. ERP HUB Technologies developed a custom ERP solution that automated our entire field operations workflow."</p>
+                  <p className="testimonial-text">"The UI/UX design workshop helped align our product roadmap. ERP Digital Solution developed a custom ERP solution that automated our entire field operations workflow."</p>
                   <div className="testimonial-author">
                     <div className="author-info">
                       <h4>Abhishek Singh</h4>
@@ -996,44 +1116,11 @@ function HomeContent({
         <section className="cta-awards-section">
           <div className="cta-banner-container">
             <div className="cta-banner-content">
-              <h2>Grow your business with ERP HUB Technologies</h2>
+              <h2>Grow your business with ERP Digital Solution</h2>
               <p>Bring your ideas to reality with our Digital Transformation Services.</p>
               <button className="btn btn-accent open-contact-btn" onClick={openContactModal}>
                 Get a Free Consultation <ArrowRight className="btn-arrow" />
               </button>
-            </div>
-          </div>
-
-          <div className="section-container awards-container">
-            <span className="section-tag text-center">ACCOLADES & PARTNERS</span>
-            <h2 className="text-center">Honoring Excellence: Our Awards and Recognitions</h2>
-            <p className="section-subtitle text-center">Discover how our commitment to delivering real value to clients, empowering our teams, and contributing to businesses has earned industry-wide recognition.</p>
-
-            <div className="awards-grid">
-              <div className="award-card">
-                <div className="award-logo">Deloitte.</div>
-                <p>Technology Fast 50 Winner</p>
-              </div>
-              <div className="award-card">
-                <div className="award-logo">siliconindia</div>
-                <p>Top 10 Software Tech Companies</p>
-              </div>
-              <div className="award-card">
-                <div className="award-logo">Forbes</div>
-                <p>Cloud Tech Innovator Recognition</p>
-              </div>
-              <div className="award-card">
-                <div className="award-logo">Hindustan Times</div>
-                <p>Best Tech Workplaces Award</p>
-              </div>
-              <div className="award-card">
-                <div className="award-logo">CEO REVIEW</div>
-                <p>Innovative Leadership Honors</p>
-              </div>
-              <div className="award-card">
-                <div className="award-logo">ISO 27001</div>
-                <p>Certified Data Security Quality</p>
-              </div>
             </div>
           </div>
         </section>
@@ -1041,7 +1128,6 @@ function HomeContent({
         {/* Latest Industry Insights (Blog) Section */}
         <section className="blog-section" id="blog-section">
           <div className="section-container">
-            <span className="section-tag text-center">LATEST NEWS</span>
             <h2 className="text-center">Latest Industry Insights</h2>
             <p className="section-subtitle text-center">As a leading enterprise software development company, we love sharing insights from the software development industry. Check out the blog section for recent developments, trends, and breakthroughs.</p>
 
@@ -1091,7 +1177,6 @@ function HomeContent({
         {/* Frequently Asked Questions Accordion */}
         <section className="faq-section">
           <div className="section-container">
-            <span className="section-tag text-center">FAQ</span>
             <h2 className="text-center">Frequently Asked Questions</h2>
             <p className="section-subtitle text-center">Got questions? We've got answers. Explore common developer and process queries below.</p>
 
@@ -1099,12 +1184,12 @@ function HomeContent({
               {/* Accordion 1 */}
               <div className={`faq-item ${activeFaqIndex === 0 ? 'active' : ''}`}>
                 <button className="faq-trigger" onClick={() => toggleFaq(0)}>
-                  <span>How can ERP HUB Technologies help build custom software?</span>
+                  <span>How can ERP Digital Solution help build custom software?</span>
                   {activeFaqIndex === 0 ? <Minus className="faq-icon" /> : <Plus className="faq-icon" />}
                 </button>
                 <div className="faq-panel">
                   <div className="faq-content-inner">
-                    <p>ERP HUB Technologies assists at every stage of your digital journey. We provide feasibility studies, requirement analysis, UI/UX design, development, testing, deployment, and ongoing support. We build solutions that fit seamlessly into your current business workflows.</p>
+                    <p>ERP Digital Solution assists at every stage of your digital journey. We provide feasibility studies, requirement analysis, UI/UX design, development, testing, deployment, and ongoing support. We build solutions that fit seamlessly into your current business workflows.</p>
                   </div>
                 </div>
               </div>
@@ -1112,7 +1197,7 @@ function HomeContent({
               {/* Accordion 2 (Active by default) */}
               <div className={`faq-item ${activeFaqIndex === 1 ? 'active' : ''}`}>
                 <button className="faq-trigger" onClick={() => toggleFaq(1)}>
-                  <span>How can I get started with a web or mobile project at ERP HUB Technologies?</span>
+                  <span>How can I get started with a web or mobile project at ERP Digital Solution?</span>
                   {activeFaqIndex === 1 ? <Minus className="faq-icon" /> : <Plus className="faq-icon" />}
                 </button>
                 <div className="faq-panel">
@@ -1157,7 +1242,7 @@ function HomeContent({
               {/* Accordion 5 */}
               <div className={`faq-item ${activeFaqIndex === 4 ? 'active' : ''}`}>
                 <button className="faq-trigger" onClick={() => toggleFaq(4)}>
-                  <span>Does ERP HUB Technologies provide rapid prototyping solutions?</span>
+                  <span>Does ERP Digital Solution provide rapid prototyping solutions?</span>
                   {activeFaqIndex === 4 ? <Minus className="faq-icon" /> : <Plus className="faq-icon" />}
                 </button>
                 <div className="faq-panel">
@@ -1170,7 +1255,7 @@ function HomeContent({
               {/* Accordion 6 */}
               <div className={`faq-item ${activeFaqIndex === 5 ? 'active' : ''}`}>
                 <button className="faq-trigger" onClick={() => toggleFaq(5)}>
-                  <span>Does ERP HUB Technologies offer CRM and automation solutions?</span>
+                  <span>Does ERP Digital Solution offer CRM and automation solutions?</span>
                   {activeFaqIndex === 5 ? <Minus className="faq-icon" /> : <Plus className="faq-icon" />}
                 </button>
                 <div className="faq-panel">
@@ -1183,7 +1268,7 @@ function HomeContent({
               {/* Accordion 7 */}
               <div className={`faq-item ${activeFaqIndex === 6 ? 'active' : ''}`}>
                 <button className="faq-trigger" onClick={() => toggleFaq(6)}>
-                  <span>What UI/UX design services does ERP HUB Technologies offer?</span>
+                  <span>What UI/UX design services does ERP Digital Solution offer?</span>
                   {activeFaqIndex === 6 ? <Minus className="faq-icon" /> : <Plus className="faq-icon" />}
                 </button>
                 <div className="faq-panel">
@@ -1201,9 +1286,8 @@ function HomeContent({
         {/* Office Presence Locations Section */}
         <section className="locations-section">
           <div className="section-container">
-            <span className="section-tag text-center">OUR OFFICES</span>
             <h2 className="text-center">Our Presence Across India</h2>
-            <p className="section-subtitle text-center">ERP HUB Technologies operates from key tech hubs in India, ensuring fast delivery and dedicated support for every client.</p>
+            <p className="section-subtitle text-center">ERP Digital Solution operates from key tech hubs in India, ensuring fast delivery and dedicated support for every client.</p>
 
             <div className="locations-grid">
               {/* Chennai */}
@@ -1245,15 +1329,10 @@ function HomeContent({
         {/* Footer Top Badges */}
         <div className="footer-top-container">
           <div className="footer-bio">
-            <a href="#" className="logo">
-              <span className="logo-icon">
-                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                </svg>
-              </span>
-              <span className="logo-text">ERP<span> HUB</span></span>
-            </a>
-            <p>ERP HUB Technologies — delivering innovative, secure, and user-friendly digital solutions for businesses across industries. Chennai | Bengaluru | Hyderabad.</p>
+            <Link to="/" className="logo logo-brand-image">
+              <img src={BRAND_LOGO_URL} alt={BRAND_ALT} className="logo-image logo-image-footer" />
+            </Link>
+            <p>ERP Digital Solution — delivering innovative, secure, and user-friendly digital solutions for businesses across industries. Chennai | Bengaluru | Hyderabad.</p>
           </div>
           <div className="footer-badges">
             <h4>OUR INTEGRATION PARTNERS</h4>
@@ -1379,7 +1458,7 @@ function HomeContent({
         </div>
 
         <div className="footer-copyright">
-          <p>&copy; 2026 ERP HUB Technologies. All Rights Reserved. | www.erphubtechnologies.com</p>
+          <p>&copy; 2026 ERP Digital Solution. All Rights Reserved. | www.erphubtechnologies.com</p>
           <div className="legal-links">
             <a href="#">Terms &amp; Conditions</a>
             <span className="divider">|</span>
@@ -1478,7 +1557,7 @@ function HomeContent({
               <div className="success-message active" id="successMessage">
                 <div className="success-icon"><CheckCircle /></div>
                 <h3>Thank You!</h3>
-                <p>Your inquiry has been submitted successfully. A consultant from ERP HUB Technologies will connect with you via email or phone within 24 hours.</p>
+                <p>Your inquiry has been submitted successfully. A consultant from ERP Digital Solution will connect with you via email or phone within 24 hours.</p>
                 <button className="btn btn-primary" id="successCloseBtn" onClick={closeContactModal}>Close</button>
               </div>
             )}
