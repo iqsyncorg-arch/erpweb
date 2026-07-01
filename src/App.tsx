@@ -3,6 +3,9 @@ import { Routes, Route, Link } from 'react-router-dom';
 import AboutUs from './pages/AboutUs';
 import ErpSuite from './pages/ErpSuite';
 import Sidep from './pages/Sidep';
+import SidepRegister from './pages/SidepRegister';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
 import { BRAND_LOGO_URL, BRAND_LOGO_HEADER_URL, BRAND_ALT } from './constants/brand';
 import {
   ChevronDown,
@@ -171,6 +174,9 @@ export default function App() {
       <Route path="/about" element={<AboutUs />} />
       <Route path="/products/erp-suite" element={<ErpSuite />} />
       <Route path="/sidep" element={<Sidep />} />
+      <Route path="/sidep/register" element={<SidepRegister />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/" element={<HomeContent
         isScrolled={isScrolled}
         isMobileMenuOpen={isMobileMenuOpen}

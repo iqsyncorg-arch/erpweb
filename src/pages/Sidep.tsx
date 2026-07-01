@@ -59,6 +59,8 @@ export default function Sidep() {
   });
   const [isFormSubmitted, setIsFormSubmitted] = useState(false);
 
+
+
   // --- Scroll Header listener ---
   useEffect(() => {
     const handleScroll = () => {
@@ -95,6 +97,8 @@ export default function Sidep() {
     e.preventDefault();
     setIsFormSubmitted(true);
   };
+
+
 
   const toggleMobileSubmenu = (key: string) => {
     setMobileSubmenus(prev => ({ ...prev, [key]: !prev[key] }));
@@ -379,9 +383,9 @@ export default function Sidep() {
             </div>
 
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <button onClick={openContactModal} style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'linear-gradient(90deg, #FFB800, #FFD770)', color: '#0f172a', padding: '15px 36px', borderRadius: '50px', fontWeight: 800, fontSize: '15px', border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', boxShadow: '0 8px 32px rgba(255,184,0,0.4)' }}>
+              <Link to="/sidep/register" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'linear-gradient(90deg, #FFB800, #FFD770)', color: '#0f172a', padding: '15px 36px', borderRadius: '50px', fontWeight: 800, fontSize: '15px', border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', boxShadow: '0 8px 32px rgba(255,184,0,0.4)', textDecoration: 'none' }}>
                 Join the Initiative <ArrowRight size={16} />
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -569,9 +573,9 @@ export default function Sidep() {
               Whether you are a learner, a mentor, a volunteer, or a corporate sponsor — there is a place for you in SIDEP. Join us in building an inclusive digital India.
             </p>
             <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button onClick={openContactModal} style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: '#0f172a', color: '#FFB800', padding: '16px 40px', borderRadius: '50px', fontWeight: 800, fontSize: '15px', border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+              <Link to="/sidep/register" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: '#0f172a', color: '#FFB800', padding: '16px 40px', borderRadius: '50px', fontWeight: 800, fontSize: '15px', border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', boxShadow: '0 8px 24px rgba(0,0,0,0.2)', textDecoration: 'none' }}>
                 Apply as a Learner <ArrowRight size={16} />
-              </button>
+              </Link>
               <button onClick={openContactModal} style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.25)', color: '#0f172a', padding: '16px 40px', borderRadius: '50px', fontWeight: 800, fontSize: '15px', border: '2px solid rgba(0,0,0,0.15)', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif' }}>
                 Partner With Us
               </button>
@@ -791,6 +795,7 @@ export default function Sidep() {
           </div>
         </div>
       </div>
+
     </>
   );
 }
