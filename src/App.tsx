@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
 import AboutUs from './pages/AboutUs';
 import ErpSuite from './pages/ErpSuite';
+import Sidep from './pages/Sidep';
 import { BRAND_LOGO_URL, BRAND_LOGO_HEADER_URL, BRAND_ALT } from './constants/brand';
 import {
   ChevronDown,
@@ -37,7 +38,6 @@ import {
   Factory,
   Info,
   BookOpen,
-  Calendar,
   Briefcase,
   Quote,
   Star,
@@ -170,6 +170,7 @@ export default function App() {
     <Routes>
       <Route path="/about" element={<AboutUs />} />
       <Route path="/products/erp-suite" element={<ErpSuite />} />
+      <Route path="/sidep" element={<Sidep />} />
       <Route path="/" element={<HomeContent
         isScrolled={isScrolled}
         isMobileMenuOpen={isMobileMenuOpen}
@@ -336,11 +337,9 @@ function HomeContent({
                     </ul>
                   </div>
                   <div className="mega-col">
-                    <h3>Latest Insights</h3>
+                    <h3>Social Initiative</h3>
                     <ul>
-                      <li><a href="#blog-section"><BookOpen className="menu-icon" /> Blogs</a></li>
-                      <li><a href="#"><Calendar className="menu-icon" /> Press & Events</a></li>
-                      <li><a href="#"><Briefcase className="menu-icon" /> Careers</a></li>
+                      <li><Link to="/sidep"><BookOpen className="menu-icon" /> SIDEP</Link></li>
                     </ul>
                   </div>
                 </div>
@@ -426,8 +425,7 @@ function HomeContent({
               </button>
               <ul className={`mobile-dropdown-menu ${mobileSubmenus.whoWeAre ? 'active' : ''}`}>
                 <li><Link to="/about" onClick={() => setIsMobileMenuOpen(false)}>About Us</Link></li>
-                <li><a href="#blog-section" onClick={() => setIsMobileMenuOpen(false)}>Blogs</a></li>
-                <li><a href="#" onClick={() => setIsMobileMenuOpen(false)}>Careers</a></li>
+                <li><Link to="/sidep" onClick={() => setIsMobileMenuOpen(false)}>SIDEP</Link></li>
               </ul>
             </li>
             <li className="mobile-nav-item">

@@ -28,8 +28,6 @@ import {
   Factory,
   Info,
   BookOpen,
-  Calendar,
-  Briefcase,
   CheckCircle,
   ArrowRight,
   TrendingUp,
@@ -340,11 +338,9 @@ export default function Industries() {
                     </ul>
                   </div>
                   <div className="mega-col">
-                    <h3>Latest Insights</h3>
+                    <h3>Social Initiative</h3>
                     <ul>
-                      <li><Link to="/#blog-section"><BookOpen className="menu-icon" /> Blogs</Link></li>
-                      <li><a href="#"><Calendar className="menu-icon" /> Press & Events</a></li>
-                      <li><a href="#"><Briefcase className="menu-icon" /> Careers</a></li>
+                      <li><Link to="/sidep"><BookOpen className="menu-icon" /> SIDEP</Link></li>
                     </ul>
                   </div>
                 </div>
@@ -433,8 +429,7 @@ export default function Industries() {
               </button>
               <ul className={`mobile-dropdown-menu ${mobileSubmenus.whoWeAre ? 'active' : ''}`}>
                 <li><Link to="/about" onClick={() => setIsMobileMenuOpen(false)}>About Us</Link></li>
-                <li><Link to="/#blog-section" onClick={() => setIsMobileMenuOpen(false)}>Blogs</Link></li>
-                <li><a href="#" onClick={() => setIsMobileMenuOpen(false)}>Careers</a></li>
+                <li><Link to="/sidep" onClick={() => setIsMobileMenuOpen(false)}>SIDEP</Link></li>
               </ul>
             </li>
             <li className="mobile-nav-item">

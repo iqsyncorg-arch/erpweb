@@ -23,7 +23,6 @@ import {
   Factory,
   Info,
   BookOpen,
-  Calendar,
   Briefcase,
   CheckCircle,
   ArrowRight,
@@ -503,11 +502,9 @@ export default function ErpSuite() {
                     </ul>
                   </div>
                   <div className="mega-col">
-                    <h3>Latest Insights</h3>
+                    <h3>Social Initiative</h3>
                     <ul>
-                      <li><Link to="/#blog-section"><BookOpen className="menu-icon" /> Blogs</Link></li>
-                      <li><a href="#"><Calendar className="menu-icon" /> Press & Events</a></li>
-                      <li><a href="#"><Briefcase className="menu-icon" /> Careers</a></li>
+                      <li><Link to="/sidep"><BookOpen className="menu-icon" /> SIDEP</Link></li>
                     </ul>
                   </div>
                 </div>
@@ -566,7 +563,14 @@ export default function ErpSuite() {
               </ul>
             </li>
             <li className="mobile-nav-item">
-              <Link to="/about" onClick={() => setIsMobileMenuOpen(false)}>About Us</Link>
+              <button className="mobile-dropdown-toggle" onClick={() => toggleMobileSubmenu('whoWeAre')}>
+                Who We Are
+                <ChevronDown style={{ transform: mobileSubmenus.whoWeAre ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease' }} />
+              </button>
+              <ul className={`mobile-dropdown-menu ${mobileSubmenus.whoWeAre ? 'active' : ''}`}>
+                <li><Link to="/about" onClick={() => setIsMobileMenuOpen(false)}>About Us</Link></li>
+                <li><Link to="/sidep" onClick={() => setIsMobileMenuOpen(false)}>SIDEP</Link></li>
+              </ul>
             </li>
           </ul>
           <button className="btn btn-primary mobile-cta-btn open-contact-btn" onClick={openContactModal}>Contact Us</button>
