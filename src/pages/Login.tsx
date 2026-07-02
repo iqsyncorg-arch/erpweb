@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  CheckCircle,
   ArrowRight,
   Lock,
   Mail,
   Eye,
   EyeOff
 } from 'lucide-react';
+import { authApi, setAuth } from '../api/client';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -20,7 +20,8 @@ export default function Login() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiError, setApiError] = useState('');
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -38,7 +39,7 @@ export default function Login() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
 
@@ -51,9 +52,20 @@ export default function Login() {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-    } else {
-      setErrors({});
+      return;
+    }
+
+    setErrors({});
+    setApiError('');
+    setIsSubmitting(true);
+    try {
+      const res = await authApi.login(formData.username.trim(), formData.password);
+      setAuth(res.token, res.user);
       navigate('/dashboard');
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -61,8 +73,7 @@ export default function Login() {
     <main style={{ padding: '80px 0', background: '#061024', minHeight: '100vh', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ width: '90%', maxWidth: '440px', margin: '0 auto' }}>
         
-        {!isLoggedIn ? (
-          <div style={{ background: '#0d1b3e', borderRadius: '24px', padding: '40px', border: '1px solid rgba(255, 184, 0, 0.15)', boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)' }}>
+        <div style={{ background: '#0d1b3e', borderRadius: '24px', padding: '40px', border: '1px solid rgba(255, 184, 0, 0.15)', boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)' }}>
             
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
               <h1 style={{ color: '#fff', fontSize: '28px', fontWeight: 800, marginBottom: '8px', fontFamily: 'Montserrat, sans-serif' }}>
@@ -76,7 +87,7 @@ export default function Login() {
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
               <div className="register-form-group">
-                <label htmlFor="loginUsername">Email or Mobile Number *</label>
+                <label htmlFor="loginUsername" style={{ color: '#fff' }}>Email or Mobile Number *</label>
                 <div style={{ position: 'relative' }}>
                   <input
                     type="text"
@@ -94,7 +105,7 @@ export default function Login() {
               </div>
 
               <div className="register-form-group">
-                <label htmlFor="loginPassword">Password *</label>
+                <label htmlFor="loginPassword" style={{ color: '#fff' }}>Password *</label>
                 <div style={{ position: 'relative' }}>
                   <input
                     type={showPassword ? 'text' : 'password'}
@@ -123,12 +134,13 @@ export default function Login() {
                   <input type="checkbox" style={{ width: 'auto', margin: 0, accentColor: '#FFB800' }} />
                   Remember Me
                 </label>
-                <a href="#" style={{ color: '#FFB800', textDecoration: 'none' }} onClick={(e) => e.preventDefault()}>Forgot Password?</a>
+                <Link to="/forgot-password" style={{ color: '#FFB800', textDecoration: 'none' }}>Forgot Password?</Link>
               </div>
 
-              <button type="submit" className="btn btn-primary btn-full" style={{ marginTop: '12px' }}>
-                Sign In <ArrowRight size={16} style={{ marginLeft: '8px' }} />
+              <button type="submit" disabled={isSubmitting} className="btn btn-primary btn-full" style={{ marginTop: '12px' }}>
+                {isSubmitting ? 'Signing In...' : 'Sign In'} <ArrowRight size={16} style={{ marginLeft: '8px' }} />
               </button>
+              {apiError && <p className="register-field-error" style={{ marginTop: '12px', textAlign: 'center' }}>{apiError}</p>}
             </form>
 
             <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '14px', color: '#94a3b8' }}>
@@ -138,27 +150,7 @@ export default function Login() {
               </Link>
             </div>
 
-          </div>
-        ) : (
-          <div style={{ background: '#0d1b3e', borderRadius: '24px', padding: '40px', border: '1px solid rgba(255, 184, 0, 0.15)', boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)', textAlign: 'center' }}>
-            <div className="register-success-icon-wrap" style={{ width: '64px', height: '64px', background: 'rgba(255, 184, 0, 0.1)', color: '#FFB800', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', boxShadow: '0 0 20px rgba(255,184,0,0.2)' }}>
-              <CheckCircle size={36} style={{ margin: '0 auto' }} />
-            </div>
-            <h2 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '12px' }}>Welcome Back!</h2>
-            <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.6, marginBottom: '32px' }}>
-              You have successfully signed into your student portal. Your enrollment dashboard is initializing.
-            </p>
-            <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
-              <button type="button" className="btn btn-primary btn-full" onClick={() => navigate('/sidep')}>
-                Go to SIDEP Main Page
-              </button>
-              <button type="button" className="btn btn-secondary btn-full" onClick={() => setIsLoggedIn(false)}>
-                Sign Out
-              </button>
-            </div>
-          </div>
-        )}
-
+        </div>
       </div>
     </main>
   );

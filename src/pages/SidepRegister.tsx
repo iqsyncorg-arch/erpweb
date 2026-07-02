@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
+import { authApi, setAuth } from '../api/client';
 
 export default function SidepRegister() {
   const navigate = useNavigate();
@@ -29,6 +30,8 @@ export default function SidepRegister() {
 
   const [registerErrors, setRegisterErrors] = useState<Record<string, string>>({});
   const [otpErrors, setOtpErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiError, setApiError] = useState('');
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -58,7 +61,7 @@ export default function SidepRegister() {
     }
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const regErrors: Record<string, string> = {};
 
@@ -103,12 +106,37 @@ export default function SidepRegister() {
     setRegisterErrors(regErrors);
 
     if (Object.keys(regErrors).length === 0) {
-      setRegisterStep(2); // Go to OTP verification step
-      window.scrollTo(0, 0);
+      setIsSubmitting(true);
+      setApiError('');
+      try {
+        await authApi.register({
+          ...registerFormData,
+          aadhaar: registerFormData.aadhaar.replace(/\s+/g, ''),
+        });
+        setRegisterStep(2);
+        window.scrollTo(0, 0);
+      } catch (err) {
+        setApiError(err instanceof Error ? err.message : 'Registration failed');
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
-  const handleOtpSubmit = (e: React.FormEvent) => {
+  const handleResendOtp = async () => {
+    setIsSubmitting(true);
+    setApiError('');
+    try {
+      await authApi.resendOtp(registerFormData.email);
+      alert('OTP resent to your email.');
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : 'Failed to resend OTP');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const securityErrors: Record<string, string> = {};
 
@@ -126,19 +154,22 @@ export default function SidepRegister() {
     setOtpErrors(securityErrors);
 
     if (Object.keys(securityErrors).length === 0) {
-      // Save student record to localStorage
-      const newStudent = {
-        id: `std-${Date.now()}`,
-        ...registerFormData,
-        registeredAt: new Date().toISOString()
-      };
-      const stored = localStorage.getItem('registered_students');
-      const studentsList = stored ? JSON.parse(stored) : [];
-      studentsList.push(newStudent);
-      localStorage.setItem('registered_students', JSON.stringify(studentsList));
-
-      setRegisterStep(3); // Go to success screen
-      window.scrollTo(0, 0);
+      setIsSubmitting(true);
+      setApiError('');
+      try {
+        const res = await authApi.verifyOtp(
+          registerFormData.email,
+          otpFormData.otp,
+          otpFormData.password
+        );
+        setAuth(res.token, res.user);
+        setRegisterStep(3);
+        window.scrollTo(0, 0);
+      } catch (err) {
+        setApiError(err instanceof Error ? err.message : 'Verification failed');
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -147,7 +178,7 @@ export default function SidepRegister() {
       <div className="register-light-container">
         
         <div className="register-light-header" style={{ textAlign: 'center' }}>
-          <h1>SIDEP Student Registration</h1>
+          <h1>ERP Digital Solution - SIDEP Student Registration</h1>
           <p>Fill in the details below to apply for the Social Initiative & Digital Empowerment Program.</p>
         </div>
 
@@ -325,8 +356,9 @@ export default function SidepRegister() {
               </div>
 
               <div className="register-light-full" style={{ marginTop: '24px' }}>
-                <button type="submit" className="btn btn-primary btn-full" style={{ background: '#0f172a', borderColor: '#0f172a', color: '#fff', padding: '14px 28px', fontSize: '15px', fontWeight: 700 }}>
-                  Register & Continue
+                {apiError && <p className="register-light-error" style={{ marginBottom: '12px' }}>{apiError}</p>}
+                <button type="submit" disabled={isSubmitting} className="btn btn-primary btn-full" style={{ background: '#0f172a', borderColor: '#0f172a', color: '#fff', padding: '14px 28px', fontSize: '15px', fontWeight: 700 }}>
+                  {isSubmitting ? 'Sending OTP...' : 'Register & Continue'}
                 </button>
               </div>
 
@@ -341,7 +373,7 @@ export default function SidepRegister() {
 
               <div className="register-light-full">
                 <div className="register-light-info-box">
-                  <strong>OTP Verification:</strong> We have simulated a verification code to <strong>{registerFormData.mobile}</strong>. Enter code <strong>123456</strong> to proceed.
+                  <strong>OTP Verification:</strong> A 6-digit code has been sent to <strong>{registerFormData.email}</strong>. Enter it below along with your password to complete registration.
                 </div>
               </div>
 
@@ -387,12 +419,18 @@ export default function SidepRegister() {
                 {otpErrors.confirmPassword && <span className="register-light-error">{otpErrors.confirmPassword}</span>}
               </div>
 
-              <div className="register-light-full" style={{ marginTop: '24px', display: 'flex', gap: '16px' }}>
-                <button type="submit" className="btn btn-primary btn-full" style={{ background: '#0f172a', borderColor: '#0f172a', color: '#fff', padding: '14px 28px', fontSize: '15px', fontWeight: 700, flex: 2 }}>
-                  Verify & Submit
+              <div className="register-light-full" style={{ marginTop: '24px', display: 'flex', gap: '16px', flexDirection: 'column' }}>
+                {apiError && <p className="register-light-error">{apiError}</p>}
+                <div style={{ display: 'flex', gap: '16px' }}>
+                <button type="submit" disabled={isSubmitting} className="btn btn-primary btn-full" style={{ background: '#0f172a', borderColor: '#0f172a', color: '#fff', padding: '14px 28px', fontSize: '15px', fontWeight: 700, flex: 2 }}>
+                  {isSubmitting ? 'Verifying...' : 'Verify & Submit'}
                 </button>
                 <button type="button" className="btn btn-secondary" onClick={() => setRegisterStep(1)} style={{ padding: '14px 28px', fontSize: '15px', fontWeight: 700, flex: 1 }}>
                   Go Back
+                </button>
+                </div>
+                <button type="button" className="btn btn-secondary" disabled={isSubmitting} onClick={handleResendOtp} style={{ padding: '10px', fontSize: '14px' }}>
+                  Resend OTP
                 </button>
               </div>
 
@@ -407,14 +445,12 @@ export default function SidepRegister() {
               </div>
               <h4>Registration Successful!</h4>
               <p>
-                Thank you, <strong>{registerFormData.fullName}</strong>. Your SIDEP application has been registered successfully. Our coordinators will review your submission and contact you within 48 hours.
+                Thank you, <strong>{registerFormData.fullName}</strong>. Your SIDEP registration was completed successfully.
+                Your login credentials have been sent to <strong>{registerFormData.email}</strong>.
               </p>
-              <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                <button type="button" className="btn btn-primary" onClick={() => navigate('/sidep')} style={{ background: '#0f172a', borderColor: '#0f172a', color: '#fff', minWidth: '180px' }}>
-                  Go to SIDEP Page
-                </button>
-                <button type="button" className="btn btn-secondary" onClick={() => navigate('/')} style={{ minWidth: '180px' }}>
-                  Go to Home Page
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <button type="button" className="btn btn-primary" onClick={() => navigate('/login')} style={{ background: '#0f172a', borderColor: '#0f172a', color: '#fff', minWidth: '180px' }}>
+                  Go to Login
                 </button>
               </div>
             </div>

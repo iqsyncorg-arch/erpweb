@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   BookOpen,
   CheckCircle,
   LogOut,
-  Sliders,
   Download,
   AlertTriangle,
   Award,
@@ -18,10 +17,20 @@ import {
   FolderOpen,
   Trash2,
   Users,
-  Search
+  Search,
+  Pencil,
 } from 'lucide-react';
-import { questionBank as defaultQuestionBank } from '../data/questions';
 import type { Question } from '../data/questions';
+import {
+  authApi,
+  adminApi,
+  quizApi,
+  getAuthUser,
+  getToken,
+  setAuth,
+  clearAuth,
+  type AuthUser,
+} from '../api/client';
 
 interface QuizAttempt {
   id: string;
@@ -47,16 +56,23 @@ interface RegisteredStudent {
   studentStatus: string;
   workStatus: string;
   reason: string;
-  registeredAt: string; // ISO string
+  registeredAt: string;
+  quizAttended: boolean;
+  quizProgram: string | null;
+  quizScore: number | null;
+  quizTotalQuestions: number | null;
+  quizCouponCode: string | null;
+  quizAttemptedAt: string | null;
 }
 
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  // --- Theme/Role Mode ---
-  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(() => getAuthUser());
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  // --- Student Navigation Menu Tab ---
+  const isAdmin = authUser?.role === 'admin';
   // 'dashboard' or 'quiz'
   const [activeTab, setActiveTab] = useState<'dashboard' | 'quiz'>('dashboard');
 
@@ -80,8 +96,11 @@ export default function Dashboard() {
 
   const [countdown, setCountdown] = useState<string>('');
 
-  // --- Stateful Questions database ---
+  // --- Stateful Questions database (admin) ---
   const [activeQuestions, setActiveQuestions] = useState<Record<string, Question[]>>({});
+  const [programList, setProgramList] = useState<{ name: string; questionCount: number }[]>([]);
+  const [quizQuestions, setQuizQuestions] = useState<Question[]>([]);
+  const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
 
   // --- Manage Programs & Quizzes Admin Forms ---
   const [newProgramName, setNewProgramName] = useState<string>('');
@@ -89,6 +108,7 @@ export default function Dashboard() {
   const [newQuestionText, setNewQuestionText] = useState<string>('');
   const [newOptions, setNewOptions] = useState<string[]>(['', '', '', '']);
   const [correctOptionIdx, setCorrectOptionIdx] = useState<number>(0);
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
 
   // --- Attempts List State (for Admin) ---
   const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
@@ -100,169 +120,134 @@ export default function Dashboard() {
   const [studentSearchQuery, setStudentSearchQuery] = useState<string>('');
   const [studentsPage, setStudentsPage] = useState<number>(1);
 
-  // Load / Seed Data
-  useEffect(() => {
-    // 1. Load active questions (default or custom)
-    const storedQuestions = localStorage.getItem('custom_questions');
-    if (storedQuestions) {
-      setActiveQuestions(JSON.parse(storedQuestions));
-    } else {
-      localStorage.setItem('custom_questions', JSON.stringify(defaultQuestionBank));
-      setActiveQuestions(defaultQuestionBank);
-    }
+  const mapAttempt = (a: Record<string, unknown>): QuizAttempt => ({
+    id: String(a.id),
+    candidateName: String(a.candidateName),
+    program: String(a.program),
+    score: Number(a.score),
+    totalQuestions: Number(a.totalQuestions),
+    couponCode: String(a.couponCode),
+    generatedAt: new Date(String(a.generatedAt)).toISOString(),
+    status: String(a.status || 'completed'),
+  });
 
-    // 2. Seed attempts
-    const storedAttempts = localStorage.getItem('quiz_attempts');
-    if (storedAttempts) {
-      setAttempts(JSON.parse(storedAttempts));
-    } else {
-      const mockAttempts: QuizAttempt[] = [
-        {
-          id: 'att-1',
-          candidateName: 'Rahul Kumar',
-          program: 'SAP Training',
-          score: 9,
-          totalQuestions: 10,
-          couponCode: 'SAP2026R9T1',
-          generatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          status: 'completed'
-        },
-        {
-          id: 'att-2',
-          candidateName: 'Priya Sharma',
-          program: 'Artificial Intelligence',
-          score: 8,
-          totalQuestions: 10,
-          couponCode: 'AI2026P8X2',
-          generatedAt: new Date(Date.now() - 75 * 60 * 60 * 1000).toISOString(), // Expired
-          status: 'completed'
-        },
-        {
-          id: 'att-3',
-          candidateName: 'Amit Patel',
-          program: 'Cloud Computing',
-          score: 10,
-          totalQuestions: 10,
-          couponCode: 'CC2026A10Y3',
-          generatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          status: 'completed'
-        },
-        {
-          id: 'att-4',
-          candidateName: 'Sanjana Roy',
-          program: 'Python Programming',
-          score: 7,
-          totalQuestions: 10,
-          couponCode: 'PY2026S7Z4',
-          generatedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-          status: 'completed'
-        }
-      ];
-      localStorage.setItem('quiz_attempts', JSON.stringify(mockAttempts));
-      setAttempts(mockAttempts);
-    }
+  const mapStudent = (s: Record<string, unknown>): RegisteredStudent => ({
+    id: String(s.id),
+    fullName: String(s.fullName),
+    email: String(s.email),
+    mobile: String(s.mobile),
+    dob: String(s.dob),
+    gender: String(s.gender),
+    aadhaar: String(s.aadhaar),
+    address: String(s.address || ''),
+    college: String(s.college),
+    studentStatus: String(s.studentStatus),
+    workStatus: String(s.workStatus),
+    reason: String(s.reason || ''),
+    registeredAt: new Date(String(s.registeredAt)).toISOString(),
+    quizAttended: Boolean(s.quizAttended),
+    quizProgram: s.quizProgram ? String(s.quizProgram) : null,
+    quizScore: s.quizScore != null ? Number(s.quizScore) : null,
+    quizTotalQuestions: s.quizTotalQuestions != null ? Number(s.quizTotalQuestions) : null,
+    quizCouponCode: s.quizCouponCode ? String(s.quizCouponCode) : null,
+    quizAttemptedAt: s.quizAttemptedAt ? new Date(String(s.quizAttemptedAt)).toISOString() : null,
+  });
 
-    // 3. Seed and load registered students
-    const storedStudents = localStorage.getItem('registered_students');
-    if (storedStudents) {
-      setRegisteredStudents(JSON.parse(storedStudents));
-    } else {
-      const mockStudents: RegisteredStudent[] = [
-        {
-          id: 'std-1',
-          fullName: 'Rahul Kumar',
-          email: 'rahul@example.com',
-          mobile: '9876543211',
-          dob: '2001-05-15',
-          gender: 'Male',
-          aadhaar: '111122223333',
-          address: 'Mumbai, Maharashtra',
-          college: 'IIT Bombay',
-          studentStatus: 'Passed Out',
-          workStatus: 'Working',
-          reason: 'To upskill in enterprise ERP platforms',
-          registeredAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: 'std-2',
-          fullName: 'Priya Sharma',
-          email: 'priya@example.com',
-          mobile: '9876543212',
-          dob: '2002-08-20',
-          gender: 'Female',
-          aadhaar: '222233334444',
-          address: 'Delhi, India',
-          college: 'Delhi University',
-          studentStatus: 'Current Student',
-          workStatus: 'Not Working',
-          reason: 'Interested in core machine learning modules',
-          registeredAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: 'std-3',
-          fullName: 'Amit Patel',
-          email: 'amit@example.com',
-          mobile: '9876543213',
-          dob: '2000-11-02',
-          gender: 'Male',
-          aadhaar: '333344445555',
-          address: 'Ahmedabad, Gujarat',
-          college: 'Nirma University',
-          studentStatus: 'Passed Out',
-          workStatus: 'Working',
-          reason: 'Validating cloud architecture competencies',
-          registeredAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: 'std-4',
-          fullName: 'Sanjana Roy',
-          email: 'sanjana@example.com',
-          mobile: '9876543214',
-          dob: '2003-02-14',
-          gender: 'Female',
-          aadhaar: '444455556666',
-          address: 'Kolkata, West Bengal',
-          college: 'Jadavpur University',
-          studentStatus: 'Current Student',
-          workStatus: 'Not Working',
-          reason: 'Learning foundational software engineering workflows',
-          registeredAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: 'std-5',
-          fullName: 'Sanjay Naveen',
-          email: 'sanjay@example.com',
-          mobile: '9876543210',
-          dob: '2002-01-01',
-          gender: 'Male',
-          aadhaar: '123456789012',
-          address: 'Bangalore, India',
-          college: 'RV College of Engineering',
-          studentStatus: 'Current Student',
-          workStatus: 'Not Working',
-          reason: 'To unlock inclusive opportunities through tech training',
-          registeredAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
-        }
-      ];
-      localStorage.setItem('registered_students', JSON.stringify(mockStudents));
-      setRegisteredStudents(mockStudents);
-    }
+  const reloadAdminData = useCallback(async () => {
+    const [studentsRes, attemptsRes, questionsRes] = await Promise.all([
+      adminApi.getStudents(studentSearchQuery),
+      quizApi.getAttempts(adminProgramFilter),
+      quizApi.getAdminQuestions(),
+    ]);
+    setRegisteredStudents(studentsRes.data.map(mapStudent));
+    setAttempts(attemptsRes.data.map(mapAttempt));
+    setActiveQuestions(questionsRes.data as Record<string, Question[]>);
+  }, [adminProgramFilter, studentSearchQuery]);
 
-    // 4. Load current user quiz status
-    const currentUserQuiz = localStorage.getItem('current_user_quiz');
-    if (currentUserQuiz) {
-      const parsed = JSON.parse(currentUserQuiz);
+  const reloadStudentData = useCallback(async () => {
+    const [programsRes, latestRes] = await Promise.all([
+      quizApi.getPrograms(),
+      quizApi.getLatestAttempt(),
+    ]);
+    setProgramList(programsRes.data);
+
+    if (latestRes.attempt) {
+      const att = latestRes.attempt;
+      const score = Number(att.score);
+      const total = Number(att.totalQuestions);
+      const generatedTime = new Date(String(att.generatedAt)).toISOString();
       setQuizResult({
-        correct: parsed.score,
-        wrong: parsed.totalQuestions - parsed.score,
-        scorePercent: (parsed.score / parsed.totalQuestions) * 100,
-        couponCode: parsed.couponCode,
-        generatedTime: parsed.generatedAt
+        correct: score,
+        wrong: total - score,
+        scorePercent: Math.round((score / total) * 100),
+        couponCode: String(att.couponCode),
+        generatedTime,
       });
-      setSelectedProgram(parsed.program);
+      setSelectedProgram(String(att.program));
       setQuizStatus('result');
+    } else {
+      setQuizResult(null);
+      setSelectedProgram('');
+      setStartedQuiz(false);
+      setQuizStatus('selection');
+      setUserAnswers({});
+      setQuizQuestions([]);
     }
   }, []);
+
+  // Load dashboard data from API
+  useEffect(() => {
+    if (!getToken()) {
+      navigate('/login');
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      setIsLoading(true);
+      setLoadError('');
+      try {
+        const meRes = await authApi.me();
+        if (cancelled) return;
+        setAuthUser(meRes.user);
+        const token = getToken();
+        if (token) setAuth(token, meRes.user);
+        const isAdmin = meRes.user.role === 'admin';
+
+        if (isAdmin) {
+          await reloadAdminData();
+          const programsRes = await quizApi.getPrograms();
+          if (!cancelled) setProgramList(programsRes.data);
+        } else {
+          await reloadStudentData();
+        }
+      } catch (err) {
+        if (!cancelled) {
+          const message = err instanceof Error ? err.message : 'Failed to load dashboard';
+          if (message.toLowerCase().includes('token') || message.toLowerCase().includes('unauthorized')) {
+            clearAuth();
+            navigate('/login');
+          } else {
+            setLoadError(message);
+          }
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, reloadAdminData, reloadStudentData]);
+
+  useEffect(() => {
+    if (!authUser || !isAdmin) return;
+    reloadAdminData().catch((err) => {
+      setLoadError(err instanceof Error ? err.message : 'Failed to refresh admin data');
+    });
+  }, [authUser, isAdmin, adminProgramFilter, studentSearchQuery, reloadAdminData]);
 
   // Reset pagination pages when filters change
   useEffect(() => {
@@ -295,31 +280,31 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [quizResult]);
 
-  // Generate Coupon Code
-  const generateCouponCode = (programName: string): string => {
-    const words = programName.toUpperCase().split(' ');
-    const prefix = words.map(w => w[0]).join('').substring(0, 3);
-    const year = new Date().getFullYear();
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let randomStr = '';
-    for (let i = 0; i < 5; i++) {
-      randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return `${prefix}${year}${randomStr}`;
-  };
-
-  // Start the Quiz
-  const handleStartQuiz = () => {
+  // Format Helper
+  const handleStartQuiz = async () => {
     if (!selectedProgram) return;
-    const questions = activeQuestions[selectedProgram];
-    if (!questions || questions.length !== 10) {
+    const prog = programList.find((p) => p.name === selectedProgram);
+    if (!prog || prog.questionCount !== 10) {
       alert('This program does not have exactly 10 questions. It must be configured with 10 questions to attempt.');
       return;
     }
-    setStartedQuiz(true);
-    setQuizStatus('assessment');
-    setCurrentQuestionIndex(0);
-    setUserAnswers({});
+    try {
+      const res = await quizApi.getQuestions(selectedProgram);
+      setQuizQuestions(
+        res.questions.map((q) => ({
+          id: q.id,
+          questionText: q.questionText,
+          options: q.options,
+          correctIndex: q.correctIndex ?? 0,
+        }))
+      );
+      setStartedQuiz(true);
+      setQuizStatus('assessment');
+      setCurrentQuestionIndex(0);
+      setUserAnswers({});
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to load quiz questions');
+    }
   };
 
   // Handle option choice click
@@ -328,64 +313,36 @@ export default function Dashboard() {
   };
 
   // Submit Quiz
-  const handleSubmitQuiz = () => {
-    const questions = activeQuestions[selectedProgram];
-    if (!questions) return;
+  const handleSubmitQuiz = async () => {
+    if (!quizQuestions.length) return;
 
-    if (Object.keys(userAnswers).length < questions.length) {
+    if (Object.keys(userAnswers).length < quizQuestions.length) {
       alert('Please answer all 10 questions before submitting.');
       return;
     }
 
-    let correctCount = 0;
-    questions.forEach((q, idx) => {
-      if (userAnswers[idx] === q.correctIndex) {
-        correctCount++;
+    setIsSubmittingQuiz(true);
+    try {
+      const res = await quizApi.submitAttempt(selectedProgram, userAnswers);
+      const result = {
+        correct: res.result.correct,
+        wrong: res.result.wrong,
+        scorePercent: Math.round(res.result.scorePercent),
+        couponCode: res.result.couponCode,
+        generatedTime: new Date(String(res.result.generatedTime)).toISOString(),
+      };
+
+      setQuizResult(result);
+      setQuizStatus('result');
+
+      if (authUser?.role === 'admin') {
+        await reloadAdminData();
       }
-    });
-
-    const wrongCount = questions.length - correctCount;
-    const scorePercent = (correctCount / questions.length) * 100;
-    const generatedCoupon = generateCouponCode(selectedProgram);
-    const generatedTime = new Date().toISOString();
-
-    const result = {
-      correct: correctCount,
-      wrong: wrongCount,
-      scorePercent,
-      couponCode: generatedCoupon,
-      generatedTime
-    };
-
-    setQuizResult(result);
-    setQuizStatus('result');
-
-    // Save in localStorage
-    const userQuizData = {
-      program: selectedProgram,
-      score: correctCount,
-      totalQuestions: questions.length,
-      couponCode: generatedCoupon,
-      generatedAt: generatedTime,
-      quizCompletionStatus: 'completed'
-    };
-    localStorage.setItem('current_user_quiz', JSON.stringify(userQuizData));
-
-    // Append attempt
-    const newAttempt: QuizAttempt = {
-      id: `att-${Date.now()}`,
-      candidateName: 'Sanjay Naveen',
-      program: selectedProgram,
-      score: correctCount,
-      totalQuestions: questions.length,
-      couponCode: generatedCoupon,
-      generatedAt: generatedTime,
-      status: 'completed'
-    };
-
-    const updatedAttempts = [...attempts, newAttempt];
-    localStorage.setItem('quiz_attempts', JSON.stringify(updatedAttempts));
-    setAttempts(updatedAttempts);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to submit quiz');
+    } finally {
+      setIsSubmittingQuiz(false);
+    }
   };
 
   // Format Helper
@@ -395,7 +352,7 @@ export default function Dashboard() {
   };
 
   // Expiry Checker
-  const getCouponStatus = (isoString: string) => {
+  const getScholarshipStatus = (isoString: string) => {
     const generatedTime = new Date(isoString).getTime();
     const expiryTime = generatedTime + 72 * 60 * 60 * 1000;
     const now = Date.now();
@@ -411,9 +368,9 @@ export default function Dashboard() {
 
   // CSV Export for Quiz Attempts
   const handleExportAttemptsCSV = () => {
-    const csvHeaders = ['Candidate Name', 'Selected Program', 'Score', 'Coupon Code', 'Generated At', 'Expiry Status'];
+    const csvHeaders = ['Candidate Name', 'Selected Program', 'Score', 'Scholarship Code', 'Generated At', 'Expiry Status'];
     const csvRows = attempts.map(att => {
-      const { text } = getCouponStatus(att.generatedAt);
+      const { text } = getScholarshipStatus(att.generatedAt);
       return [
         `"${att.candidateName}"`,
         `"${att.program}"`,
@@ -437,18 +394,23 @@ export default function Dashboard() {
 
   // CSV Export for Registered Students
   const handleExportStudentsCSV = () => {
-    const csvHeaders = ['Full Name', 'Email ID', 'Mobile Number', 'Date of Birth', 'Gender', 'Aadhaar Number', 'College Name', 'Student Status', 'Working Status', 'Registered At'];
+    const csvHeaders = ['Full Name', 'Email ID', 'Mobile Number', 'Date of Birth', 'Gender', 'Aadhaar Number', 'College Name', 'Student Status', 'Working Status', 'Quiz Attended', 'Quiz Program', 'Quiz Score', 'Registered At'];
     const csvRows = registeredStudents.map(std => {
       return [
         `"${std.fullName}"`,
         `"${std.email}"`,
         `"${std.mobile}"`,
-        `"${std.dob}"`,
+        `"${formatDob(std.dob)}"`,
         `"${std.gender}"`,
         `"${std.aadhaar}"`,
         `"${std.college}"`,
         `"${std.studentStatus}"`,
         `"${std.workStatus}"`,
+        `"${std.quizAttended ? 'Yes' : 'No'}"`,
+        `"${std.quizProgram || '—'}"`,
+        std.quizAttended && std.quizScore != null && std.quizTotalQuestions != null
+          ? `"${std.quizScore}/${std.quizTotalQuestions}"`
+          : '"—"',
         `"${formatDateTime(std.registeredAt)}"`
       ];
     });
@@ -464,21 +426,19 @@ export default function Dashboard() {
     document.body.removeChild(link);
   };
 
-  // Reset helper
-  const handleResetQuizDemo = () => {
-    localStorage.removeItem('current_user_quiz');
-    setQuizResult(null);
-    setSelectedProgram('');
-    setStartedQuiz(false);
-    setQuizStatus('selection');
-    setUserAnswers({});
-    const filtered = attempts.filter(att => att.candidateName !== 'Sanjay Naveen');
-    localStorage.setItem('quiz_attempts', JSON.stringify(filtered));
-    setAttempts(filtered);
+  const handleRefreshAdminData = async () => {
+    setLoadError('');
+    try {
+      await reloadAdminData();
+      const programsRes = await quizApi.getPrograms();
+      setProgramList(programsRes.data);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Failed to refresh dashboard');
+    }
   };
 
   // ADMIN ACTION: Add Training Program
-  const handleAddProgram = (e: React.FormEvent) => {
+  const handleAddProgram = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProgramName.trim()) {
       alert('Please enter a program name.');
@@ -490,28 +450,44 @@ export default function Dashboard() {
       return;
     }
 
-    const updated = { ...activeQuestions, [name]: [] };
-    setActiveQuestions(updated);
-    localStorage.setItem('custom_questions', JSON.stringify(updated));
-    setNewProgramName('');
-    setTargetProgramForQuestion(name);
-    alert(`Training program "${name}" created successfully. Now configure the quiz questions in the "Manage Quizzes" tab.`);
-  };
-
-  // ADMIN ACTION: Delete a Training Program entirely
-  const handleDeleteProgram = (progName: string) => {
-    if (!window.confirm(`Are you sure you want to delete the program "${progName}"? This will delete all its questions.`)) return;
-    const updated = { ...activeQuestions };
-    delete updated[progName];
-    setActiveQuestions(updated);
-    localStorage.setItem('custom_questions', JSON.stringify(updated));
-    if (targetProgramForQuestion === progName) {
-      setTargetProgramForQuestion('');
+    try {
+      await quizApi.createProgram(name);
+      await reloadAdminData();
+      const programsRes = await quizApi.getPrograms();
+      setProgramList(programsRes.data);
+      setNewProgramName('');
+      setTargetProgramForQuestion(name);
+      alert(`Training program "${name}" created successfully. Now configure the quiz questions in the "Manage Quizzes" tab.`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to create program');
     }
   };
 
-  // ADMIN ACTION: Add Quiz Question
-  const handleAddQuestion = (e: React.FormEvent) => {
+  // ADMIN ACTION: Delete a Training Program entirely
+  const handleDeleteProgram = async (progName: string) => {
+    if (!window.confirm(`Are you sure you want to delete the program "${progName}"? This will delete all its questions.`)) return;
+    try {
+      await quizApi.deleteProgram(progName);
+      await reloadAdminData();
+      const programsRes = await quizApi.getPrograms();
+      setProgramList(programsRes.data);
+      if (targetProgramForQuestion === progName) {
+        setTargetProgramForQuestion('');
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete program');
+    }
+  };
+
+  const resetQuestionForm = () => {
+    setEditingQuestionIndex(null);
+    setNewQuestionText('');
+    setNewOptions(['', '', '', '']);
+    setCorrectOptionIdx(0);
+  };
+
+  // ADMIN ACTION: Add or update Quiz Question
+  const handleSaveQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetProgramForQuestion) {
       alert('Please select a training program.');
@@ -527,43 +503,73 @@ export default function Dashboard() {
     }
 
     const programQs = activeQuestions[targetProgramForQuestion] || [];
-    if (programQs.length >= 10) {
+    const isEditing = editingQuestionIndex !== null;
+
+    if (!isEditing && programQs.length >= 10) {
       alert('This quiz already has 10 questions. Delete or clear questions to add new ones.');
       return;
     }
 
-    const newQ: Question = {
-      id: Date.now(),
+    const payload = {
       questionText: newQuestionText.trim(),
-      options: newOptions.map(o => o.trim()),
-      correctIndex: correctOptionIdx
+      options: newOptions.map((o) => o.trim()),
+      correctIndex: correctOptionIdx,
     };
 
-    const updated = {
-      ...activeQuestions,
-      [targetProgramForQuestion]: [...programQs, newQ]
-    };
+    try {
+      if (isEditing) {
+        await quizApi.updateQuestion(targetProgramForQuestion, editingQuestionIndex, payload);
+        alert('Question updated successfully!');
+      } else {
+        await quizApi.addQuestion(targetProgramForQuestion, payload);
+        alert(`Question added successfully! (${programQs.length + 1} of 10)`);
+      }
+      await reloadAdminData();
+      resetQuestionForm();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : `Failed to ${isEditing ? 'update' : 'add'} question`);
+    }
+  };
 
-    setActiveQuestions(updated);
-    localStorage.setItem('custom_questions', JSON.stringify(updated));
-
-    // Reset fields
-    setNewQuestionText('');
-    setNewOptions(['', '', '', '']);
-    setCorrectOptionIdx(0);
-    alert(`Question added successfully! (${programQs.length + 1} of 10)`);
+  const handleStartEditQuestion = (progName: string, qIndex: number) => {
+    const q = activeQuestions[progName]?.[qIndex];
+    if (!q) return;
+    setTargetProgramForQuestion(progName);
+    setEditingQuestionIndex(qIndex);
+    setNewQuestionText(q.questionText);
+    setNewOptions([...q.options]);
+    setCorrectOptionIdx(q.correctIndex);
   };
 
   // ADMIN ACTION: Delete a student registration
-  const handleDeleteStudent = (studentId: string) => {
+  const handleDeleteStudent = async (studentId: string) => {
     if (!window.confirm('Are you sure you want to remove this registered student record?')) return;
-    const updated = registeredStudents.filter(std => std.id !== studentId);
-    setRegisteredStudents(updated);
-    localStorage.setItem('registered_students', JSON.stringify(updated));
+    try {
+      await adminApi.deleteStudent(studentId);
+      await reloadAdminData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete student');
+    }
+  };
+
+  // ADMIN ACTION: Delete a single quiz question
+  const handleDeleteQuestion = async (progName: string, qIndex: number) => {
+    if (!window.confirm('Delete this question?')) return;
+    try {
+      await quizApi.deleteQuestion(progName, qIndex);
+      if (editingQuestionIndex === qIndex && targetProgramForQuestion === progName) {
+        resetQuestionForm();
+      } else if (editingQuestionIndex !== null && targetProgramForQuestion === progName && editingQuestionIndex > qIndex) {
+        setEditingQuestionIndex(editingQuestionIndex - 1);
+      }
+      await reloadAdminData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete question');
+    }
   };
 
   // ADMIN ACTION: Quick mock generate questions (for testing convenience)
-  const handleQuickGenerateMock = (progName: string) => {
+  const handleQuickGenerateMock = async (progName: string) => {
     const count = activeQuestions[progName]?.length || 0;
     if (count >= 10) {
       alert('Program already has 10 or more questions.');
@@ -580,27 +586,58 @@ export default function Dashboard() {
           `Primary optimization execution rule #${i}`,
           `Strategic integration parameter #${i}`,
           `Secondary validation configuration #${i}`,
-          `Alternative database interface #${i}`
+          `Alternative database interface #${i}`,
         ],
-        correctIndex: (i % 4)
+        correctIndex: i % 4,
       });
     }
 
     const updated = {
       ...activeQuestions,
-      [progName]: [...(activeQuestions[progName] || []), ...generated]
+      [progName]: [...(activeQuestions[progName] || []), ...generated],
     };
-    setActiveQuestions(updated);
-    localStorage.setItem('custom_questions', JSON.stringify(updated));
-    alert(`Instantly generated ${needed} questions for "${progName}". It is now ready for candidate validation tests!`);
+
+    try {
+      await quizApi.replaceQuestions(
+        Object.fromEntries(
+          Object.entries(updated).map(([name, questions]) => [
+            name,
+            questions.map(({ questionText, options, correctIndex }) => ({
+              questionText,
+              options,
+              correctIndex,
+            })),
+          ])
+        )
+      );
+      await reloadAdminData();
+      alert(`Instantly generated ${needed} questions for "${progName}". It is now ready for candidate validation tests!`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to generate questions');
+    }
   };
 
   // ADMIN ACTION: Clear all questions inside a program
-  const handleClearProgramQuestions = (progName: string) => {
+  const handleClearProgramQuestions = async (progName: string) => {
     if (!window.confirm(`Are you sure you want to clear all questions for "${progName}"?`)) return;
     const updated = { ...activeQuestions, [progName]: [] };
-    setActiveQuestions(updated);
-    localStorage.setItem('custom_questions', JSON.stringify(updated));
+    try {
+      await quizApi.replaceQuestions(
+        Object.fromEntries(
+          Object.entries(updated).map(([name, questions]) => [
+            name,
+            questions.map(({ questionText, options, correctIndex }) => ({
+              questionText,
+              options,
+              correctIndex,
+            })),
+          ])
+        )
+      );
+      await reloadAdminData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to clear questions');
+    }
   };
 
   // --- Pagination & Filtering Variables ---
@@ -617,34 +654,43 @@ export default function Dashboard() {
   const totalStudentsPages = Math.ceil(filteredStudents.length / studentsPageSize);
   const paginatedStudents = filteredStudents.slice((studentsPage - 1) * studentsPageSize, studentsPage * studentsPageSize);
 
+  const userInitials = authUser?.fullName
+    ? authUser.fullName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+    : 'U';
+  const firstName = authUser?.fullName?.split(' ')[0] || 'Learner';
+  const formatMobile = (mobile?: string) => {
+    if (!mobile) return '—';
+    const digits = mobile.replace(/\D/g, '');
+    if (digits.length === 10) return `+91 ${digits}`;
+    return mobile;
+  };
+  const formatDob = (dob?: string) => {
+    if (!dob) return '—';
+    const d = new Date(dob);
+    return Number.isNaN(d.getTime()) ? dob : d.toLocaleDateString('en-IN');
+  };
+
+  if (isLoading) {
+    return (
+      <div className="dash-layout" style={{ alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <p style={{ color: '#64748b', fontSize: '16px' }}>Loading dashboard...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="dash-layout">
       {/* Sidebar Navigation */}
       <aside className="dash-sidebar">
         <div className="dash-sidebar-header">
-          <h2 style={{ color: '#FFB800', margin: 0, fontSize: '20px', fontWeight: 800 }}>ERP HUB Portal</h2>
-          <span style={{ fontSize: '11px', color: '#94a3b8', letterSpacing: '0.5px' }}>LEARNER SPACE</span>
+          <h2 style={{ color: '#FFB800', margin: 0, fontSize: '20px', fontWeight: 800 }}>ERP Digital Portal</h2>
+          <span style={{ fontSize: '11px', color: '#94a3b8', letterSpacing: '0.5px' }}>
+            {isAdmin ? 'ADMIN SPACE' : 'LEARNER SPACE'}
+          </span>
         </div>
 
         <nav className="dash-sidebar-menu">
-          {!isAdminMode ? (
-            <>
-              <button
-                className={`dash-menu-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-                onClick={() => setActiveTab('dashboard')}
-              >
-                <LayoutDashboard size={18} />
-                Dashboard
-              </button>
-              <button
-                className={`dash-menu-item ${activeTab === 'quiz' ? 'active' : ''}`}
-                onClick={() => setActiveTab('quiz')}
-              >
-                <BookOpen size={18} />
-                Quiz
-              </button>
-            </>
-          ) : (
+          {isAdmin ? (
             <>
               <button
                 className={`dash-menu-item ${adminSubTab === 'attempts' ? 'active' : ''}`}
@@ -675,6 +721,23 @@ export default function Dashboard() {
                 Manage Quizzes
               </button>
             </>
+          ) : (
+            <>
+              <button
+                className={`dash-menu-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+                onClick={() => setActiveTab('dashboard')}
+              >
+                <LayoutDashboard size={18} />
+                Dashboard
+              </button>
+              <button
+                className={`dash-menu-item ${activeTab === 'quiz' ? 'active' : ''}`}
+                onClick={() => setActiveTab('quiz')}
+              >
+                <BookOpen size={18} />
+                Quiz
+              </button>
+            </>
           )}
         </nav>
 
@@ -682,16 +745,19 @@ export default function Dashboard() {
         <div style={{ padding: '20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#FFB800', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-              SN
+              {userInitials}
             </div>
             <div>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>Sanjay Naveen</div>
-              <div style={{ fontSize: '11px', color: '#64748b' }}>SIDEP Candidate</div>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>{authUser?.fullName || 'User'}</div>
+              <div style={{ fontSize: '11px', color: '#64748b' }}>{authUser?.role === 'admin' ? 'Administrator' : 'SIDEP Candidate'}</div>
             </div>
           </div>
           
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => {
+              clearAuth();
+              navigate('/login');
+            }}
             style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}
           >
             <LogOut size={14} />
@@ -702,56 +768,61 @@ export default function Dashboard() {
 
       {/* Main Content Area */}
       <main className="dash-content">
+        {loadError && (
+          <div style={{ marginBottom: '16px', padding: '12px 16px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', fontSize: '14px' }}>
+            {loadError}
+          </div>
+        )}
         
         {/* Top Control Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <div>
             <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800 }}>
-              {isAdminMode ? 'Admin Dashboard' : activeTab === 'dashboard' ? 'Welcome back, Sanjay!' : 'SIDEP Assessment'}
+              {isAdmin ? 'Admin Dashboard' : activeTab === 'dashboard' ? `Welcome back, ${firstName}!` : 'SIDEP Assessment'}
             </h1>
             <p style={{ color: '#64748b', margin: '4px 0 0 0', fontSize: '14px' }}>
-              {isAdminMode ? 'Monitor quiz attempts, track registered students, configure training programs, and authorize evaluation quizzes.' : 'Digital Empowerment & Skill Validation Hub.'}
+              {isAdmin
+                ? 'Monitor quiz attempts, track registered students, configure training programs, and authorize evaluation quizzes.'
+                : 'Digital Empowerment & Skill Validation Hub.'}
             </p>
           </div>
 
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <button
-              onClick={handleResetQuizDemo}
-              style={{ padding: '8px 16px', background: '#fee2e2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
-              title="Reset Quiz state to retake"
-            >
-              Reset Quiz Status
-            </button>
-
-            <button
-              onClick={() => {
-                setIsAdminMode(!isAdminMode);
-                setActiveTab('dashboard');
-                setAdminSubTab('attempts');
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 18px',
-                background: isAdminMode ? '#FFB800' : '#0f172a',
-                color: isAdminMode ? '#0f172a' : '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 700,
-                fontSize: '13px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-              }}
-            >
-              <Sliders size={14} />
-              {isAdminMode ? 'Switch to Student View' : 'Switch to Admin View'}
-            </button>
+            {isAdmin ? (
+              <button
+                onClick={handleRefreshAdminData}
+                style={{ padding: '8px 16px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#475569', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
+                title="Refresh admin dashboard"
+              >
+                <RefreshCw size={14} />
+                Refresh
+              </button>
+            ) : (
+              <button
+                onClick={async () => {
+                  setLoadError('');
+                  try {
+                    const meRes = await authApi.me();
+                    setAuthUser(meRes.user);
+                    const token = getToken();
+                    if (token) setAuth(token, meRes.user);
+                    await reloadStudentData();
+                  } catch (err) {
+                    setLoadError(err instanceof Error ? err.message : 'Failed to refresh dashboard');
+                  }
+                }}
+                style={{ padding: '8px 16px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#475569', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
+                title="Refresh dashboard from server"
+              >
+                <RefreshCw size={14} />
+                Refresh
+              </button>
+            )}
           </div>
         </div>
 
         {/* ---------------- STUDENT MODE ---------------- */}
-        {!isAdminMode && (
+        {!isAdmin && (
           <>
             {/* TABS: DASHBOARD CONTENT */}
             {activeTab === 'dashboard' && (
@@ -764,7 +835,9 @@ export default function Dashboard() {
                     </div>
                     <div>
                       <span style={{ fontSize: '13px', color: '#64748b', display: 'block' }}>Program Status</span>
-                      <strong style={{ fontSize: '20px', fontWeight: 800 }}>Enrolled</strong>
+                      <strong style={{ fontSize: '20px', fontWeight: 800 }}>
+                        {quizResult ? 'Assessment Completed' : 'Enrolled'}
+                      </strong>
                     </div>
                   </div>
 
@@ -785,9 +858,9 @@ export default function Dashboard() {
                       <Clock size={24} />
                     </div>
                     <div>
-                      <span style={{ fontSize: '13px', color: '#64748b', display: 'block' }}>Coupon Status</span>
+                      <span style={{ fontSize: '13px', color: '#64748b', display: 'block' }}>Scholarship Status</span>
                       <strong style={{ fontSize: '20px', fontWeight: 800 }}>
-                        {quizResult ? getCouponStatus(quizResult.generatedTime).text : 'No Coupon Generated'}
+                        {quizResult ? getScholarshipStatus(quizResult.generatedTime).text : 'No Scholarship Generated'}
                       </strong>
                     </div>
                   </div>
@@ -802,18 +875,30 @@ export default function Dashboard() {
 
                   <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '24px' }}>
                     <h4 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px' }}>My Registration Details</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', fontSize: '14px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', fontSize: '14px' }}>
                       <div>
                         <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>EMAIL ID</span>
-                        <strong>sanjay@example.com</strong>
+                        <strong>{authUser?.email || '—'}</strong>
                       </div>
                       <div>
                         <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>MOBILE NUMBER</span>
-                        <strong>+91 9876543210</strong>
+                        <strong>{formatMobile(authUser?.mobile)}</strong>
                       </div>
                       <div>
                         <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>EDUCATION STATUS</span>
-                        <strong>Current Student</strong>
+                        <strong>{authUser?.studentStatus || '—'}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>COLLEGE / INSTITUTION</span>
+                        <strong>{authUser?.college || '—'}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>DATE OF BIRTH</span>
+                        <strong>{formatDob(authUser?.dob)}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>WORK STATUS</span>
+                        <strong>{authUser?.workStatus || '—'}</strong>
                       </div>
                     </div>
                   </div>
@@ -822,10 +907,10 @@ export default function Dashboard() {
                     <div style={{ marginTop: '32px', background: '#f8fafc', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                       <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 12px 0' }}>
                         <Award style={{ color: '#FFB800' }} size={20} />
-                        Your Active Coupon Code
+                        Your Active Scholarship Status
                       </h4>
                       <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px 0' }}>
-                        You completed the <strong>{selectedProgram}</strong> assessment. Here is your digital empowerment coupon. Our team will contact you shortly.
+                        You completed the <strong>{selectedProgram}</strong> assessment. Here is your digital empowerment scholarship. Our team will contact you shortly.
                       </p>
                       
                       <div style={{ display: 'inline-flex', alignItems: 'center', background: '#0f172a', padding: '12px 24px', borderRadius: '8px', border: '1px dashed #FFB800', color: '#FFB800', fontWeight: '800', fontSize: '20px', letterSpacing: '1px', marginBottom: '16px' }}>
@@ -851,7 +936,7 @@ export default function Dashboard() {
                         <AlertTriangle style={{ color: '#d97706' }} size={24} />
                         <div>
                           <strong style={{ color: '#92400e', fontSize: '14px' }}>Skills Assessment Pending</strong>
-                          <span style={{ display: 'block', fontSize: '13px', color: '#b45309' }}>Please take your assessment to unlock your program coupon code.</span>
+                          <span style={{ display: 'block', fontSize: '13px', color: '#b45309' }}>Please take your assessment to unlock your program scholarship code.</span>
                         </div>
                       </div>
                       <button
@@ -878,8 +963,7 @@ export default function Dashboard() {
                     </p>
 
                     <div className="quiz-program-grid" style={{ marginBottom: '32px' }}>
-                      {Object.keys(activeQuestions).map((programName) => {
-                        const qCount = activeQuestions[programName]?.length || 0;
+                      {programList.map(({ name: programName, questionCount: qCount }) => {
                         const isSelected = selectedProgram === programName;
                         return (
                           <div
@@ -904,7 +988,7 @@ export default function Dashboard() {
                     <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: '24px' }}>
                       <button
                         onClick={handleStartQuiz}
-                        disabled={!selectedProgram || activeQuestions[selectedProgram]?.length !== 10}
+                        disabled={!selectedProgram || (programList.find((p) => p.name === selectedProgram)?.questionCount ?? 0) !== 10}
                         className="btn btn-primary"
                         style={{
                           background: '#0f172a',
@@ -913,8 +997,8 @@ export default function Dashboard() {
                           padding: '12px 28px',
                           fontSize: '14px',
                           fontWeight: 700,
-                          opacity: (selectedProgram && activeQuestions[selectedProgram]?.length === 10) ? 1 : 0.5,
-                          cursor: (selectedProgram && activeQuestions[selectedProgram]?.length === 10) ? 'pointer' : 'not-allowed'
+                          opacity: (selectedProgram && (programList.find((p) => p.name === selectedProgram)?.questionCount ?? 0) === 10) ? 1 : 0.5,
+                          cursor: (selectedProgram && (programList.find((p) => p.name === selectedProgram)?.questionCount ?? 0) === 10) ? 'pointer' : 'not-allowed'
                         }}
                       >
                         Start Assessment
@@ -940,7 +1024,7 @@ export default function Dashboard() {
 
                     {/* Question Rendering */}
                     {(() => {
-                      const questions = activeQuestions[selectedProgram];
+                      const questions = quizQuestions;
                       if (!questions || questions.length === 0) return <p>Loading questions...</p>;
                       const q = questions[currentQuestionIndex];
 
@@ -1032,6 +1116,7 @@ export default function Dashboard() {
                       ) : (
                         <button
                           onClick={handleSubmitQuiz}
+                          disabled={isSubmittingQuiz}
                           style={{
                             padding: '10px 28px',
                             background: '#16a34a',
@@ -1040,10 +1125,11 @@ export default function Dashboard() {
                             color: '#fff',
                             fontWeight: 700,
                             fontSize: '13px',
-                            cursor: 'pointer'
+                            cursor: isSubmittingQuiz ? 'not-allowed' : 'pointer',
+                            opacity: isSubmittingQuiz ? 0.7 : 1,
                           }}
                         >
-                          Submit Assessment
+                          {isSubmittingQuiz ? 'Submitting...' : 'Submit Assessment'}
                         </button>
                       )}
                     </div>
@@ -1085,7 +1171,7 @@ export default function Dashboard() {
                         </div>
                       </div>
 
-                      {/* Coupon Box */}
+                      {/* Scholarship Box */}
                       <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '24px', borderRadius: '12px', textAlign: 'center', marginBottom: '24px' }}>
                         <div style={{ color: '#047857', fontWeight: 800, fontSize: '18px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                           <Award />
@@ -1097,7 +1183,7 @@ export default function Dashboard() {
                         </div>
 
                         <p style={{ color: '#065f46', fontSize: '13px', maxWidth: '580px', margin: '0 auto 16px', lineHeight: 1.6 }}>
-                          "Congratulations! You have successfully completed the assessment. Your coupon code is valid for 72 hours from the time of generation. Please use it before it expires. Our team will contact you shortly."
+                          "Congratulations! You have successfully completed the assessment. Your scholarship code is valid for 72 hours from the time of generation. Please use it before it expires. Our team will contact you shortly."
                         </p>
 
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px', color: '#065f46', background: '#d1fae5', padding: '8px 16px', borderRadius: '6px', width: 'fit-content', margin: '0 auto' }}>
@@ -1124,7 +1210,7 @@ export default function Dashboard() {
         )}
 
         {/* ---------------- ADMIN MODE ---------------- */}
-        {isAdminMode && (
+        {isAdmin && (
           <div>
             {/* SUBTAB 1: ATTEMPTS LIST */}
             {adminSubTab === 'attempts' && (
@@ -1132,7 +1218,7 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
                   <div>
                     <h3 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>SIDEP Learner Quiz Attempts</h3>
-                    <p style={{ color: '#64748b', fontSize: '13px', margin: '4px 0 0' }}>Track student grades, codes generated, and code duration status.</p>
+                    <p style={{ color: '#64748b', fontSize: '13px', margin: '4px 0 0' }}>Track student grades, scholarship codes generated, and scholarship duration status.</p>
                   </div>
 
                   <div style={{ display: 'flex', gap: '12px' }}>
@@ -1178,14 +1264,14 @@ export default function Dashboard() {
                         <th>Candidate Name</th>
                         <th>Selected Program</th>
                         <th>Score</th>
-                        <th>Coupon Code</th>
+                        <th>Scholarship Code</th>
                         <th>Generated Date &amp; Time</th>
-                        <th>Coupon Expiry Status</th>
+                        <th>Scholarship Expiry Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {paginatedAttempts.map(att => {
-                        const expiry = getCouponStatus(att.generatedAt);
+                        const expiry = getScholarshipStatus(att.generatedAt);
                         return (
                           <tr key={att.id}>
                             <td style={{ fontWeight: 600 }}>{att.candidateName}</td>
@@ -1312,6 +1398,7 @@ export default function Dashboard() {
                         <th>Aadhaar Number</th>
                         <th>College / Institution</th>
                         <th>Status (Edu / Job)</th>
+                        <th>Quiz Status</th>
                         <th>Registration Date</th>
                         <th>Actions</th>
                       </tr>
@@ -1325,7 +1412,7 @@ export default function Dashboard() {
                             <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{std.mobile}</div>
                           </td>
                           <td>
-                            <div>{std.dob}</div>
+                            <div>{formatDob(std.dob)}</div>
                             <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{std.gender}</div>
                           </td>
                           <td>
@@ -1337,6 +1424,30 @@ export default function Dashboard() {
                           <td>
                             <div style={{ fontSize: '13px', fontWeight: 600, color: '#0369a1' }}>{std.studentStatus}</div>
                             <div style={{ fontSize: '11px', color: '#475569', marginTop: '2px' }}>{std.workStatus}</div>
+                          </td>
+                          <td>
+                            {std.quizAttended ? (
+                              <div>
+                                <span className="status-badge active" style={{ marginBottom: '6px', display: 'inline-block' }}>
+                                  Attended
+                                </span>
+                                <div style={{ fontSize: '12px', color: '#475569', marginTop: '4px' }}>
+                                  <strong>{std.quizProgram}</strong>
+                                </div>
+                                {std.quizScore != null && std.quizTotalQuestions != null && (
+                                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                                    Score: {std.quizScore}/{std.quizTotalQuestions}
+                                  </div>
+                                )}
+                                {std.quizAttemptedAt && (
+                                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                                    {formatDateTime(std.quizAttemptedAt)}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="status-badge expired">Not Attempted</span>
+                            )}
                           </td>
                           <td>{formatDateTime(std.registeredAt)}</td>
                           <td>
@@ -1352,7 +1463,7 @@ export default function Dashboard() {
                       ))}
                       {filteredStudents.length === 0 && (
                         <tr>
-                          <td colSpan={8} style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
+                          <td colSpan={9} style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
                             No registered students match the search criteria.
                           </td>
                         </tr>
@@ -1468,20 +1579,25 @@ export default function Dashboard() {
                 <div className="dash-card">
                   <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <PlusCircle style={{ color: '#16a34a' }} size={20} />
-                    Add Quiz Question
+                    {editingQuestionIndex !== null ? 'Edit Quiz Question' : 'Add Quiz Question'}
                   </h3>
                   <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 20px 0' }}>
-                    Configure specific multiple-choice assessment questions for an existing training program.
+                    {editingQuestionIndex !== null
+                      ? `Editing question ${editingQuestionIndex + 1}. Update the fields below and save.`
+                      : 'Configure specific multiple-choice assessment questions for an existing training program.'}
                   </p>
 
-                  <form onSubmit={handleAddQuestion} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <form onSubmit={handleSaveQuestion} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     
                     <div className="register-form-group">
                       <label htmlFor="adminSelectProg">Select Training Program *</label>
                       <select
                         id="adminSelectProg"
                         value={targetProgramForQuestion}
-                        onChange={(e) => setTargetProgramForQuestion(e.target.value)}
+                        onChange={(e) => {
+                          setTargetProgramForQuestion(e.target.value);
+                          resetQuestionForm();
+                        }}
                         style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none' }}
                       >
                         <option value="">-- Choose Program --</option>
@@ -1556,53 +1672,139 @@ export default function Dashboard() {
                       </select>
                     </div>
 
-                    <button type="submit" className="btn btn-primary" style={{ background: '#16a34a', borderColor: '#16a34a', color: '#fff', width: 'fit-content' }}>
-                      Add Question to Quiz
-                    </button>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                      <button type="submit" className="btn btn-primary" style={{ background: '#16a34a', borderColor: '#16a34a', color: '#fff', width: 'fit-content' }}>
+                        {editingQuestionIndex !== null ? 'Update Question' : 'Add Question to Quiz'}
+                      </button>
+                      {editingQuestionIndex !== null && (
+                        <button
+                          type="button"
+                          onClick={resetQuestionForm}
+                          style={{ padding: '10px 18px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#475569', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
+                        >
+                          Cancel Edit
+                        </button>
+                      )}
+                    </div>
                   </form>
                 </div>
 
                 <div className="dash-card">
                   <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 8px 0' }}>Quiz Status & Quick Tools</h3>
                   <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 20px 0' }}>
-                    Select a program to review its question count, clear questions, or auto-fill mock entries.
+                    Questions for the program selected on the left. Review, auto-fill, or clear entries.
                   </p>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {Object.keys(activeQuestions).map(pName => {
-                      const count = activeQuestions[pName]?.length || 0;
-                      return (
-                        <div key={pName} style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <strong style={{ fontSize: '14px', color: '#0f172a' }}>{pName}</strong>
-                            <span style={{ display: 'block', fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-                              Questions configured: <strong>{count} of 10</strong>
-                            </span>
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            {count < 10 && (
-                              <button
-                                onClick={() => handleQuickGenerateMock(pName)}
-                                className="btn btn-secondary"
-                                style={{ padding: '8px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                title="Autofill remaining questions with high-quality mock data"
-                              >
-                                <RefreshCw size={12} /> Auto-populate
-                              </button>
-                            )}
-                            {count > 0 && (
-                              <button
-                                onClick={() => handleClearProgramQuestions(pName)}
-                                style={{ padding: '8px 12px', background: '#fee2e2', border: '1px solid #fecaca', color: '#ef4444', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
-                              >
-                                Clear All
-                              </button>
-                            )}
+                  {!targetProgramForQuestion ? (
+                    <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '8px', border: '1px dashed #cbd5e1', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
+                      Select a training program from the left to view its questions.
+                    </div>
+                  ) : (() => {
+                    const pName = targetProgramForQuestion;
+                    const questions = activeQuestions[pName] || [];
+                    const count = questions.length;
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
+                            <div>
+                              <strong style={{ fontSize: '15px', color: '#0f172a' }}>{pName}</strong>
+                              <span style={{ display: 'block', fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                                Questions configured: <strong>{count} of 10</strong>
+                              </span>
+                              <span style={{ display: 'inline-block', marginTop: '8px', fontSize: '12px', padding: '4px 8px', borderRadius: '4px', fontWeight: 700, background: count === 10 ? '#dcfce7' : '#fffbeb', color: count === 10 ? '#16a34a' : '#d97706' }}>
+                                {count === 10 ? 'Quiz Ready' : 'Needs Questions'}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                              {count < 10 && (
+                                <button
+                                  onClick={() => handleQuickGenerateMock(pName)}
+                                  className="btn btn-secondary"
+                                  style={{ padding: '8px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  title="Autofill remaining questions with mock data"
+                                >
+                                  <RefreshCw size={12} /> Auto-populate
+                                </button>
+                              )}
+                              {count > 0 && (
+                                <button
+                                  onClick={() => handleClearProgramQuestions(pName)}
+                                  style={{ padding: '8px 12px', background: '#fee2e2', border: '1px solid #fecaca', color: '#ef4444', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                                >
+                                  Clear All
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
+
+                        {count === 0 ? (
+                          <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '14px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                            No questions added yet. Use the form on the left to add questions.
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '520px', overflowY: 'auto' }}>
+                            {questions.map((q, idx) => (
+                              <div
+                                key={`${pName}-${idx}`}
+                                style={{
+                                  background: editingQuestionIndex === idx && targetProgramForQuestion === pName ? '#fffbeb' : '#fff',
+                                  padding: '16px',
+                                  borderRadius: '8px',
+                                  border: `1px solid ${editingQuestionIndex === idx && targetProgramForQuestion === pName ? '#fde68a' : '#e2e8f0'}`,
+                                }}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '10px' }}>
+                                  <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#0f172a', lineHeight: 1.5 }}>
+                                    <span style={{ color: '#FFB800', marginRight: '6px' }}>Q{idx + 1}.</span>
+                                    {q.questionText}
+                                  </p>
+                                  <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                                    <button
+                                      onClick={() => handleStartEditQuestion(pName, idx)}
+                                      style={{ background: 'none', border: 'none', color: '#0284c7', cursor: 'pointer', padding: '2px' }}
+                                      title="Edit this question"
+                                    >
+                                      <Pencil size={15} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteQuestion(pName, idx)}
+                                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px' }}
+                                      title="Delete this question"
+                                    >
+                                      <Trash2 size={15} />
+                                    </button>
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  {q.options.map((opt, oIdx) => (
+                                    <div
+                                      key={oIdx}
+                                      style={{
+                                        fontSize: '13px',
+                                        padding: '8px 12px',
+                                        borderRadius: '6px',
+                                        background: oIdx === q.correctIndex ? '#ecfdf5' : '#f8fafc',
+                                        border: `1px solid ${oIdx === q.correctIndex ? '#a7f3d0' : '#e2e8f0'}`,
+                                        color: oIdx === q.correctIndex ? '#047857' : '#475569',
+                                        fontWeight: oIdx === q.correctIndex ? 600 : 400,
+                                      }}
+                                    >
+                                      {String.fromCharCode(65 + oIdx)}. {opt}
+                                      {oIdx === q.correctIndex && (
+                                        <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: 700 }}>(Correct)</span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             )}

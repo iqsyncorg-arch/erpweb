@@ -37,7 +37,50 @@ import {
   TrendingUp,
   BookMarked,
   Rocket,
+  Target,
+  Eye,
+  Scale,
+  Star,
+  Handshake,
+  Sprout,
 } from 'lucide-react';
+
+const MISSION_COMMITMENTS = [
+  'Delivering high-quality digital literacy and technology education.',
+  'Enhancing employability through industry-aligned training and certifications.',
+  'Supporting students and job seekers with career guidance, internships, and placement assistance.',
+  'Promoting digital inclusion among women, rural youth, and underserved communities.',
+  'Encouraging innovation, entrepreneurship, and lifelong learning.',
+  'Building strong partnerships with educational institutions, industries, NGOs, and government organizations.',
+  'Contributing to India\'s vision of a digitally empowered and knowledge-driven society.',
+];
+
+const VISION_POINTS = [
+  'Every student has access to quality technology education.',
+  'Every job seeker possesses industry-ready skills.',
+  'Every woman has equal opportunities for digital and economic empowerment.',
+  'Every rural community benefits from digital inclusion and technology awareness.',
+  'Educational institutions and industries work together to bridge the skills gap.',
+  'Technology serves as a powerful tool for social progress, innovation, and sustainable development.',
+];
+
+const CORE_VALUES = [
+  { icon: <TrendingUp size={28} />, title: 'Empowerment', desc: 'Creating opportunities that help individuals achieve their full potential.' },
+  { icon: <Lightbulb size={28} />, title: 'Innovation', desc: 'Embracing emerging technologies to solve real-world challenges.' },
+  { icon: <Scale size={28} />, title: 'Integrity', desc: 'Building trust through transparency, ethics, and accountability.' },
+  { icon: <Star size={28} />, title: 'Excellence', desc: 'Delivering high-quality education, training, and professional services.' },
+  { icon: <Users size={28} />, title: 'Inclusivity', desc: 'Ensuring equal access to learning and career opportunities for all.' },
+  { icon: <Handshake size={28} />, title: 'Collaboration', desc: 'Working with institutions, industries, communities, and partners to maximize social impact.' },
+  { icon: <Sprout size={28} />, title: 'Sustainability', desc: 'Creating long-term value through continuous learning and responsible digital transformation.' },
+];
+
+const CONFERENCE_GALLERY = [
+  { src: '/assets/sidep_conference_1.png', alt: 'SIDEP digital empowerment conference with adult learners' },
+  { src: '/assets/sidep_conference_2.png', alt: 'Adult students in a digital skills workshop' },
+  { src: '/assets/sidep_conference_3.png', alt: 'Technology seminar for job seekers and professionals' },
+  { src: '/assets/sidep_training_1.png', alt: 'Hands-on technology bootcamp for adult students' },
+  { src: '/assets/sidep_training_2.png', alt: 'Career mentoring session with adult learners' },
+];
 
 export default function Sidep() {
   // --- States ---
@@ -327,7 +370,7 @@ export default function Sidep() {
       <main style={{ background: '#f8fafc' }}>
 
         {/* ══════════════════════════════════════════
-            HERO — Full-bleed background image
+            HERO — Full-bleed background video
         ══════════════════════════════════════════ */}
         <section style={{
           position: 'relative',
@@ -338,18 +381,25 @@ export default function Sidep() {
           justifyContent: 'center',
           overflow: 'hidden',
         }}>
-          {/* Full-bleed background image */}
-          <img
-            src="https://images.unsplash.com/photo-1529390079861-591de354faf5?auto=format&fit=crop&w=1800&q=80"
-            alt="Digital Empowerment Community"
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            aria-hidden="true"
             style={{
               position: 'absolute', inset: 0,
               width: '100%', height: '100%',
               objectFit: 'cover',
-              objectPosition: 'center top',
+              objectPosition: 'center',
               zIndex: 0,
             }}
-          />
+          >
+            <source
+              src="https://res.cloudinary.com/dq6gr5zjc/video/upload/v1782999216/Create_a_cinematic_CSR_documen_hdtifu.mp4"
+              type="video/mp4"
+            />
+          </video>
 
           {/* Dark gradient overlay */}
           <div style={{
@@ -388,8 +438,6 @@ export default function Sidep() {
               </Link>
             </div>
           </div>
-
-          {/* Floating stat pill — pinned at bottom of hero */}
         </section>
 
 
@@ -417,95 +465,193 @@ export default function Sidep() {
         </section>
 
         {/* ══════════════════════════════════════════
-            VISION + MISSION SPLIT PANEL
+            ABOUT THE INITIATIVE
         ══════════════════════════════════════════ */}
-        <section style={{ padding: '100px 0', background: '#fff' }}>
+        <section style={{ padding: '100px 0', background: '#f8fafc' }}>
           <div style={{ width: '90%', maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ textAlign: 'center', marginBottom: '72px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '56px' }}>
               <span style={{ display: 'inline-block', background: 'rgba(255,184,0,0.12)', color: '#b8860b', fontSize: '11px', fontWeight: 800, letterSpacing: '2.5px', padding: '6px 18px', borderRadius: '50px', marginBottom: '16px', fontFamily: 'Montserrat, sans-serif', textTransform: 'uppercase' }}>
-                Our Purpose
+                About the Initiative
               </span>
-              <h2 style={{ fontSize: '2.8rem', fontWeight: 900, color: '#0f172a', fontFamily: 'Montserrat, sans-serif', lineHeight: 1.15 }}>
-                Vision & Mission
+              <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, color: '#0f172a', fontFamily: 'Montserrat, sans-serif', lineHeight: 1.2, margin: '0 0 16px' }}>
+                Empowering Communities Through <span style={{ color: '#FFB800' }}>Digital Innovation</span>
               </h2>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
-              {/* Vision Card */}
-              <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)', borderRadius: '24px', padding: '56px 48px', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(255,184,0,0.08)' }} />
-                <div style={{ position: 'absolute', bottom: '20px', left: '20px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(0,229,255,0.06)' }} />
-                <div style={{ width: '56px', height: '56px', background: 'rgba(255,184,0,0.15)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '28px', position: 'relative', zIndex: 1 }}>
-                  <Lightbulb size={28} style={{ color: '#FFB800' }} />
-                </div>
-                <h3 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', marginBottom: '20px', fontFamily: 'Montserrat, sans-serif', position: 'relative', zIndex: 1 }}>Our Vision</h3>
-                <p style={{ color: '#94a3b8', fontSize: '1.05rem', lineHeight: 1.8, margin: 0, position: 'relative', zIndex: 1 }}>
-                  To empower individuals and communities through technology, education, and digital innovation — enabling <strong style={{ color: '#FFB800' }}>inclusive growth</strong> and <strong style={{ color: '#FFB800' }}>sustainable career opportunities</strong> for all.
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '56px', alignItems: 'start', marginBottom: '64px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <p style={{ color: '#475569', fontSize: '1.05rem', lineHeight: 1.85, margin: 0 }}>
+                  The ERP HUB Social Initiative &amp; Digital Empowerment Program is a flagship Corporate Social Responsibility (CSR) initiative by ERP HUB Technologies, dedicated to creating a digitally empowered and inclusive society. We believe that access to quality education, digital skills, and career opportunities should be available to everyone, regardless of their economic or social background.
+                </p>
+                <p style={{ color: '#475569', fontSize: '1.05rem', lineHeight: 1.85, margin: 0 }}>
+                  Our initiative focuses on bridging the gap between education and industry by providing practical, industry-relevant training, career guidance, and digital literacy programs. Through strategic collaborations with educational institutions, corporate organizations, government bodies, NGOs, and community partners, we strive to equip students, job seekers, women, rural youth, entrepreneurs, and working professionals with the skills needed to thrive in today&apos;s digital economy.
                 </p>
               </div>
-
-              {/* Mission Card */}
-              <div style={{ background: '#f8fafc', borderRadius: '24px', padding: '56px 48px', border: '2px solid #f1f5f9' }}>
-                <div style={{ width: '56px', height: '56px', background: 'rgba(255,184,0,0.12)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '28px' }}>
-                  <Rocket size={28} style={{ color: '#FFB800' }} />
-                </div>
-                <h3 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', marginBottom: '24px', fontFamily: 'Montserrat, sans-serif' }}>Our Mission</h3>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {[
-                    'Bridge the digital skills gap.',
-                    'Promote technology education and digital literacy.',
-                    'Improve employability through industry-oriented training.',
-                    'Support students and job seekers from underserved communities.',
-                    'Encourage lifelong learning and innovation.',
-                  ].map((m, i) => (
-                    <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-                      <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#FFB800', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
-                        <CheckCircle size={13} style={{ color: '#0f172a' }} />
-                      </div>
-                      <span style={{ color: '#334155', fontSize: '0.97rem', lineHeight: 1.6, fontWeight: 500 }}>{m}</span>
-                    </li>
-                  ))}
-                </ul>
+              <div>
+                <img
+                  src="/assets/sidep_conference_1.png"
+                  alt="SIDEP conference with adult learners"
+                  style={{ width: '100%', borderRadius: '20px', boxShadow: '0 20px 40px rgba(15,23,42,0.1)', border: '1px solid #e2e8f0' }}
+                />
               </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px', marginBottom: '48px' }}>
+              <p style={{ color: '#475569', fontSize: '1.02rem', lineHeight: 1.85, margin: 0 }}>
+                We conduct workshops, awareness campaigns, skill development programs, certification courses, career mentoring, internship opportunities, and technology awareness sessions in emerging domains such as SAP ERP, Artificial Intelligence (AI), Data Analytics, Cloud Computing, Cyber Security, Web Technologies, and Digital Transformation.
+              </p>
+              <p style={{ color: '#475569', fontSize: '1.02rem', lineHeight: 1.85, margin: 0 }}>
+                Beyond technical training, our program also emphasizes soft skills, leadership, entrepreneurship, financial literacy, communication, and employability enhancement, ensuring holistic personal and professional development.
+              </p>
+            </div>
+
+            <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderRadius: '20px', padding: '40px 48px', textAlign: 'center' }}>
+              <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '1.1rem', lineHeight: 1.8, margin: 0, fontStyle: 'italic' }}>
+                At ERP HUB Technologies, we measure our success by the lives we transform, the careers we build, and the communities we empower. Every participant represents another step toward a stronger, digitally skilled, and future-ready India.
+              </p>
+            </div>
+
+            <div style={{ marginTop: '48px', textAlign: 'center' }}>
+              <Link to="/sidep/register" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: '#0f172a', color: '#fff', padding: '16px 36px', borderRadius: '50px', fontWeight: 700, fontSize: '15px', textDecoration: 'none' }}>
+                Register for SIDEP <ArrowRight size={16} />
+              </Link>
             </div>
           </div>
         </section>
 
         {/* ══════════════════════════════════════════
-            PROGRAM OBJECTIVES — Icon Grid
+            CONFERENCE & TRAINING GALLERY
         ══════════════════════════════════════════ */}
-        <section id="program-objectives" style={{ padding: '100px 0', background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)' }}>
+        <section style={{ padding: '80px 0', background: '#fff', borderTop: '1px solid #f1f5f9' }}>
+          <div style={{ width: '90%', maxWidth: '1200px', margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+              <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a', fontFamily: 'Montserrat, sans-serif', marginBottom: '12px' }}>
+                Learning in Action
+              </h2>
+              <p style={{ color: '#64748b', fontSize: '1rem', maxWidth: '560px', margin: '0 auto', lineHeight: 1.7 }}>
+                Real workshops, conferences, and mentoring sessions empowering adult learners across communities.
+              </p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+              {CONFERENCE_GALLERY.map((img) => (
+                <div key={img.src} style={{ borderRadius: '16px', overflow: 'hidden', boxShadow: '0 8px 24px rgba(15,23,42,0.08)', border: '1px solid #e2e8f0' }}>
+                  <img src={img.src} alt={img.alt} style={{ width: '100%', height: '220px', objectFit: 'cover', display: 'block' }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════
+            MISSION & VISION
+        ══════════════════════════════════════════ */}
+        <section style={{
+          padding: '120px 0',
+          position: 'relative',
+          background: 'url(/assets/sidep_conference_3.png) no-repeat center center / cover',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(135deg, rgba(6, 14, 30, 0.94) 0%, rgba(13, 27, 62, 0.9) 100%)',
+            zIndex: 0
+          }} />
+
+          <div style={{ width: '90%', maxWidth: '1200px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+            <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+              <h2 style={{ fontSize: '2.8rem', fontWeight: 900, color: '#fff', fontFamily: 'Montserrat, sans-serif', lineHeight: 1.15 }}>
+                Mission &amp; Vision
+              </h2>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px', marginBottom: '40px' }}>
+
+              {/* Mission */}
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.04)',
+                backdropFilter: 'blur(16px)',
+                borderRadius: '24px',
+                padding: '48px 40px',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}>
+                <div style={{ width: '56px', height: '56px', background: 'rgba(0,229,255,0.12)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+                  <Target size={28} style={{ color: '#00E5FF' }} />
+                </div>
+                <h3 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', marginBottom: '20px', fontFamily: 'Montserrat, sans-serif' }}>Our Mission</h3>
+                <p style={{ color: '#cbd5e1', fontSize: '1.02rem', lineHeight: 1.85, margin: '0 0 28px' }}>
+                  To empower individuals and communities by providing accessible, affordable, and industry-focused digital education, professional skill development, and career opportunities that enable sustainable employment, innovation, and inclusive economic growth.
+                </p>
+                <p style={{ color: '#FFB800', fontSize: '0.85rem', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '16px' }}>We are committed to:</p>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {MISSION_COMMITMENTS.map((m, i) => (
+                    <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                      <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#FFB800', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
+                        <CheckCircle size={12} style={{ color: '#0f172a' }} />
+                      </div>
+                      <span style={{ color: '#cbd5e1', fontSize: '0.95rem', lineHeight: 1.65 }}>{m}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Vision */}
+              <div style={{
+                background: 'rgba(13, 27, 62, 0.55)',
+                backdropFilter: 'blur(16px)',
+                borderRadius: '24px',
+                padding: '48px 40px',
+                border: '1px solid rgba(255, 184, 0, 0.2)'
+              }}>
+                <div style={{ width: '56px', height: '56px', background: 'rgba(255,184,0,0.15)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+                  <Eye size={28} style={{ color: '#FFB800' }} />
+                </div>
+                <h3 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', marginBottom: '20px', fontFamily: 'Montserrat, sans-serif' }}>Our Vision</h3>
+                <p style={{ color: '#cbd5e1', fontSize: '1.02rem', lineHeight: 1.85, margin: '0 0 24px' }}>
+                  To become a leading catalyst for digital transformation and social empowerment by creating opportunities that enable every individual to learn, grow, innovate, and succeed in the digital era.
+                </p>
+                <p style={{ color: '#FFB800', fontSize: '0.85rem', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '16px' }}>We envision a future where:</p>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {VISION_POINTS.map((v, i) => (
+                    <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                      <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(0,229,255,0.2)', border: '1px solid #00E5FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
+                        <CheckCircle size={12} style={{ color: '#00E5FF' }} />
+                      </div>
+                      <span style={{ color: '#cbd5e1', fontSize: '0.95rem', lineHeight: 1.65 }}>{v}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p style={{ color: '#94a3b8', fontSize: '0.95rem', lineHeight: 1.75, margin: '28px 0 0', fontStyle: 'italic' }}>
+                  Our long-term vision is to build a globally recognized ecosystem of learning, innovation, and community development that transforms lives through education, technology, and meaningful opportunities.
+                </p>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════
+            CORE VALUES
+        ══════════════════════════════════════════ */}
+        <section id="core-values" style={{ padding: '100px 0', background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)' }}>
           <div style={{ width: '90%', maxWidth: '1200px', margin: '0 auto' }}>
             <div style={{ textAlign: 'center', marginBottom: '72px' }}>
               <span style={{ display: 'inline-block', background: 'rgba(14,165,233,0.12)', color: '#0369a1', fontSize: '11px', fontWeight: 800, letterSpacing: '2.5px', padding: '6px 18px', borderRadius: '50px', marginBottom: '16px', fontFamily: 'Montserrat, sans-serif', textTransform: 'uppercase' }}>
-                Core Focus Areas
+                What We Stand For
               </span>
               <h2 style={{ fontSize: '2.8rem', fontWeight: 900, color: '#0f172a', fontFamily: 'Montserrat, sans-serif' }}>
-                Program Objectives
+                Our Core Values
               </h2>
-              <p style={{ maxWidth: '560px', margin: '16px auto 0', color: '#64748b', fontSize: '1.05rem', lineHeight: 1.7 }}>
-                Five pillars that guide how we create real, lasting impact in communities across India.
-              </p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-              {[
-                { icon: <GraduationCap size={32} />, color: '#7c3aed', bg: 'rgba(124,58,237,0.08)', num: '01', title: 'Free or Subsidized Training', desc: 'Provide accessible, zero-barrier technology training programs to individuals who need them most — removing financial obstacles from learning.' },
-                { icon: <Laptop size={32} />, color: '#0369a1', bg: 'rgba(3,105,161,0.08)', num: '02', title: 'Digital Literacy', desc: 'Enhance core digital literacy among students, youth, and adults to equip them with the foundational skills needed to thrive in the modern world.' },
-                { icon: <Compass size={32} />, color: '#059669', bg: 'rgba(5,150,105,0.08)', num: '03', title: 'Career Guidance & Mentorship', desc: 'Offer structured career counselling, resume support, and one-on-one mentorship to help individuals navigate the technology industry confidently.' },
-                { icon: <HeartHandshake size={32} />, color: '#dc2626', bg: 'rgba(220,38,38,0.08)', num: '04', title: 'Community Support', desc: 'Champion women, rural youth, and marginalised communities through focused digital education and targeted outreach programs.' },
-                { icon: <TrendingUp size={32} />, color: '#d97706', bg: 'rgba(217,119,6,0.08)', num: '05', title: 'Industry-Ready Workforce', desc: 'Build a job-ready talent pool through project-based learning, live hackathons, and direct industry exposure that employers value.' },
-              ].map((obj) => (
-                <div key={obj.num} style={{ background: '#fff', borderRadius: '20px', padding: '40px 36px', boxShadow: '0 4px 24px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9', transition: 'transform 0.3s, box-shadow 0.3s', cursor: 'default' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-6px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 16px 40px rgba(0,0,0,0.1)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 24px rgba(0,0,0,0.05)'; }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-                    <div style={{ width: '60px', height: '60px', background: obj.bg, borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: obj.color, flexShrink: 0 }}>{obj.icon}</div>
-                    <span style={{ fontSize: '2.5rem', fontWeight: 900, color: '#f1f5f9', fontFamily: 'Montserrat, sans-serif', lineHeight: 1 }}>{obj.num}</span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+              {CORE_VALUES.map((val) => (
+                <div key={val.title} style={{ background: '#fff', borderRadius: '20px', padding: '36px 32px', boxShadow: '0 4px 24px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9' }}>
+                  <div style={{ width: '56px', height: '56px', background: 'rgba(255,184,0,0.12)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b8860b', marginBottom: '20px' }}>
+                    {val.icon}
                   </div>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', marginBottom: '12px', fontFamily: 'Montserrat, sans-serif' }}>{obj.title}</h3>
-                  <p style={{ color: '#64748b', fontSize: '0.93rem', lineHeight: 1.7, margin: 0 }}>{obj.desc}</p>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', marginBottom: '10px', fontFamily: 'Montserrat, sans-serif' }}>{val.title}</h3>
+                  <p style={{ color: '#64748b', fontSize: '0.93rem', lineHeight: 1.7, margin: 0 }}>{val.desc}</p>
                 </div>
               ))}
             </div>

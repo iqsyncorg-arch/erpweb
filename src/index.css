@@ -5623,7 +5623,7 @@ a {
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   border-radius: 8px !important;
-  padding: 10px 14px !important;
+  padding: 10px 14px;
   color: #0f172a !important;
   font-size: 14px !important;
   transition: all 0.3s ease !important;
@@ -5648,4 +5648,19 @@ a {
 .register-form-group select.error-field,
 .register-form-group textarea.error-field {
   border-color: #ef4444 !important;
+}
+
+/* --- SIDEP Marquee Styling --- */
+@keyframes sidepMarquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(calc(-50% - 20px)); }
+}
+
+.sidep-marquee-track {
+  animation: sidepMarquee 25s linear infinite;
+}
+
+/* --- SIDEP Marquee Track Pause --- */
+.sidep-marquee-container:hover .sidep-marquee-track {
+  animation-play-state: paused;
 }
