@@ -19,6 +19,8 @@ import {
   Users,
   Search,
   Pencil,
+  Menu,
+  X,
 } from 'lucide-react';
 import type { Question } from '../data/questions';
 import {
@@ -119,6 +121,7 @@ export default function Dashboard() {
   const [registeredStudents, setRegisteredStudents] = useState<RegisteredStudent[]>([]);
   const [studentSearchQuery, setStudentSearchQuery] = useState<string>('');
   const [studentsPage, setStudentsPage] = useState<number>(1);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const mapAttempt = (a: Record<string, unknown>): QuizAttempt => ({
     id: String(a.id),
@@ -257,6 +260,23 @@ export default function Dashboard() {
   useEffect(() => {
     setStudentsPage(1);
   }, [studentSearchQuery]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 1024) setSidebarOpen(false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = sidebarOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [sidebarOpen]);
+
+  const closeSidebar = () => setSidebarOpen(false);
 
   // Update Countdown Live Timer
   useEffect(() => {
@@ -680,8 +700,33 @@ export default function Dashboard() {
 
   return (
     <div className="dash-layout">
+      {/* Mobile top bar */}
+      <header className="dash-mobile-header">
+        <button
+          type="button"
+          className="dash-mobile-menu-btn"
+          onClick={() => setSidebarOpen((open) => !open)}
+          aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
+        >
+          {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
+        <div className="dash-mobile-title">
+          <span className="dash-mobile-brand">ERP Digital Portal</span>
+          <span className="dash-mobile-subtitle">
+            {isAdmin ? 'Admin Dashboard' : activeTab === 'dashboard' ? `Hi, ${firstName}` : 'SIDEP Assessment'}
+          </span>
+        </div>
+      </header>
+
+      {/* Sidebar overlay (mobile) */}
+      <div
+        className={`dash-sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
+        onClick={closeSidebar}
+        aria-hidden="true"
+      />
+
       {/* Sidebar Navigation */}
-      <aside className="dash-sidebar">
+      <aside className={`dash-sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="dash-sidebar-header">
           <h2 style={{ color: '#FFB800', margin: 0, fontSize: '20px', fontWeight: 800 }}>ERP Digital Portal</h2>
           <span style={{ fontSize: '11px', color: '#94a3b8', letterSpacing: '0.5px' }}>
@@ -694,28 +739,28 @@ export default function Dashboard() {
             <>
               <button
                 className={`dash-menu-item ${adminSubTab === 'attempts' ? 'active' : ''}`}
-                onClick={() => setAdminSubTab('attempts')}
+                onClick={() => { setAdminSubTab('attempts'); closeSidebar(); }}
               >
                 <ListFilter size={18} />
                 Learner Attempts
               </button>
               <button
                 className={`dash-menu-item ${adminSubTab === 'students' ? 'active' : ''}`}
-                onClick={() => setAdminSubTab('students')}
+                onClick={() => { setAdminSubTab('students'); closeSidebar(); }}
               >
                 <Users size={18} />
                 Registered Students
               </button>
               <button
                 className={`dash-menu-item ${adminSubTab === 'programs' ? 'active' : ''}`}
-                onClick={() => setAdminSubTab('programs')}
+                onClick={() => { setAdminSubTab('programs'); closeSidebar(); }}
               >
                 <FolderOpen size={18} />
                 Manage Programs
               </button>
               <button
                 className={`dash-menu-item ${adminSubTab === 'quizzes' ? 'active' : ''}`}
-                onClick={() => setAdminSubTab('quizzes')}
+                onClick={() => { setAdminSubTab('quizzes'); closeSidebar(); }}
               >
                 <PlusCircle size={18} />
                 Manage Quizzes
@@ -725,14 +770,14 @@ export default function Dashboard() {
             <>
               <button
                 className={`dash-menu-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-                onClick={() => setActiveTab('dashboard')}
+                onClick={() => { setActiveTab('dashboard'); closeSidebar(); }}
               >
                 <LayoutDashboard size={18} />
                 Dashboard
               </button>
               <button
                 className={`dash-menu-item ${activeTab === 'quiz' ? 'active' : ''}`}
-                onClick={() => setActiveTab('quiz')}
+                onClick={() => { setActiveTab('quiz'); closeSidebar(); }}
               >
                 <BookOpen size={18} />
                 Quiz
@@ -742,7 +787,7 @@ export default function Dashboard() {
         </nav>
 
         {/* User Context bottom block */}
-        <div style={{ padding: '20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="dash-sidebar-footer">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#FFB800', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
               {userInitials}
@@ -754,11 +799,12 @@ export default function Dashboard() {
           </div>
           
           <button
+            type="button"
             onClick={() => {
               clearAuth();
               navigate('/login');
             }}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}
+            className="dash-signout-btn"
           >
             <LogOut size={14} />
             Sign Out
@@ -775,23 +821,24 @@ export default function Dashboard() {
         )}
         
         {/* Top Control Bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800 }}>
+        <div className="dash-top-bar">
+          <div className="dash-top-bar-text">
+            <h1 className="dash-page-title">
               {isAdmin ? 'Admin Dashboard' : activeTab === 'dashboard' ? `Welcome back, ${firstName}!` : 'SIDEP Assessment'}
             </h1>
-            <p style={{ color: '#64748b', margin: '4px 0 0 0', fontSize: '14px' }}>
+            <p className="dash-page-subtitle">
               {isAdmin
                 ? 'Monitor quiz attempts, track registered students, configure training programs, and authorize evaluation quizzes.'
                 : 'Digital Empowerment & Skill Validation Hub.'}
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div className="dash-top-bar-actions">
             {isAdmin ? (
               <button
+                type="button"
                 onClick={handleRefreshAdminData}
-                style={{ padding: '8px 16px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#475569', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
+                className="dash-refresh-btn"
                 title="Refresh admin dashboard"
               >
                 <RefreshCw size={14} />
@@ -799,6 +846,7 @@ export default function Dashboard() {
               </button>
             ) : (
               <button
+                type="button"
                 onClick={async () => {
                   setLoadError('');
                   try {
@@ -811,7 +859,7 @@ export default function Dashboard() {
                     setLoadError(err instanceof Error ? err.message : 'Failed to refresh dashboard');
                   }
                 }}
-                style={{ padding: '8px 16px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#475569', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
+                className="dash-refresh-btn"
                 title="Refresh dashboard from server"
               >
                 <RefreshCw size={14} />
@@ -829,7 +877,7 @@ export default function Dashboard() {
               <div>
                 {/* Stats Grid */}
                 <div className="dash-grid-3" style={{ marginBottom: '32px' }}>
-                  <div className="dash-card" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div className="dash-card dash-stat-card">
                     <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#e0f2fe', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <CheckCircle size={24} />
                     </div>
@@ -841,7 +889,7 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="dash-card" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div className="dash-card dash-stat-card">
                     <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Award size={24} />
                     </div>
@@ -853,7 +901,7 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="dash-card" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div className="dash-card dash-stat-card">
                     <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#dcfce7', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Clock size={24} />
                     </div>
@@ -867,7 +915,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Main Dashboard Panel */}
-                <div className="dash-card" style={{ padding: '32px' }}>
+                <div className="dash-card dash-overview-card">
                   <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>SIDEP Candidate Overview</h3>
                   <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.6, marginBottom: '24px' }}>
                     Welcome to the Social Initiative & Digital Empowerment Program candidate portal. Use this portal to complete your skills validation assessment.
@@ -875,7 +923,7 @@ export default function Dashboard() {
 
                   <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '24px' }}>
                     <h4 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px' }}>My Registration Details</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', fontSize: '14px' }}>
+                    <div className="dash-details-grid">
                       <div>
                         <span style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>EMAIL ID</span>
                         <strong>{authUser?.email || '—'}</strong>
@@ -931,8 +979,8 @@ export default function Dashboard() {
                   )}
 
                   {!quizResult && (
-                    <div style={{ marginTop: '32px', background: '#fffbeb', border: '1px solid #fde68a', padding: '20px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <div className="dash-alert-banner">
+                      <div className="dash-alert-banner-content">
                         <AlertTriangle style={{ color: '#d97706' }} size={24} />
                         <div>
                           <strong style={{ color: '#92400e', fontSize: '14px' }}>Skills Assessment Pending</strong>
@@ -940,8 +988,9 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <button
+                        type="button"
                         onClick={() => setActiveTab('quiz')}
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: '#d97706', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}
+                        className="dash-alert-action-btn"
                       >
                         Take Quiz <ChevronRight size={14} />
                       </button>
@@ -1010,7 +1059,7 @@ export default function Dashboard() {
                 {/* Step 2: Quiz Assessment */}
                 {quizStatus === 'assessment' && (
                   <div className="dash-card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
+                    <div className="dash-quiz-header">
                       <div>
                         <strong style={{ fontSize: '18px', display: 'block' }}>{selectedProgram} Assessment</strong>
                         <span style={{ fontSize: '13px', color: '#64748b' }}>
@@ -1072,7 +1121,7 @@ export default function Dashboard() {
                     })()}
 
                     {/* Navigation Buttons */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', marginTop: '32px', paddingTop: '24px' }}>
+                    <div className="dash-quiz-nav">
                       <button
                         onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
                         disabled={currentQuestionIndex === 0}
@@ -1152,7 +1201,7 @@ export default function Dashboard() {
                         Skill validation details for your program evaluation.
                       </p>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+                      <div className="dash-grid-4">
                         <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                           <span style={{ display: 'block', fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Selected Program</span>
                           <strong style={{ fontSize: '15px', color: '#0f172a', display: 'block', marginTop: '4px' }}>{selectedProgram}</strong>
@@ -1215,13 +1264,13 @@ export default function Dashboard() {
             {/* SUBTAB 1: ATTEMPTS LIST */}
             {adminSubTab === 'attempts' && (
               <div className="dash-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
+                <div className="dash-card-header">
                   <div>
                     <h3 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>SIDEP Learner Quiz Attempts</h3>
                     <p style={{ color: '#64748b', fontSize: '13px', margin: '4px 0 0' }}>Track student grades, scholarship codes generated, and scholarship duration status.</p>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '12px' }}>
+                  <div className="dash-card-header-actions">
                     {/* Filter */}
                     <select
                       value={adminProgramFilter}
@@ -1235,20 +1284,9 @@ export default function Dashboard() {
                     </select>
 
                     <button
+                      type="button"
                       onClick={handleExportAttemptsCSV}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 16px',
-                        background: '#16a34a',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                        fontWeight: 600
-                      }}
+                      className="dash-export-btn"
                     >
                       <Download size={14} />
                       Export Results (CSV)
@@ -1257,7 +1295,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Table */}
-                <div style={{ overflowX: 'auto' }}>
+                <div className="dash-table-wrap">
                   <table className="admin-table">
                     <thead>
                       <tr>
@@ -1346,40 +1384,29 @@ export default function Dashboard() {
             {/* SUBTAB 2: REGISTERED STUDENTS LIST */}
             {adminSubTab === 'students' && (
               <div className="dash-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
+                <div className="dash-card-header">
                   <div>
                     <h3 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>Registered Students Profile List</h3>
                     <p style={{ color: '#64748b', fontSize: '13px', margin: '4px 0 0' }}>Review registrations and applications completed on the portal.</p>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <div className="dash-card-header-actions dash-card-header-actions--search">
                     {/* Search Input */}
-                    <div style={{ position: 'relative' }}>
+                    <div className="dash-search-wrap">
                       <input
                         type="text"
                         placeholder="Search student or college..."
                         value={studentSearchQuery}
                         onChange={(e) => setStudentSearchQuery(e.target.value)}
-                        style={{ padding: '8px 12px 8px 36px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', width: '240px', outline: 'none' }}
+                        className="dash-search-input"
                       />
                       <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                     </div>
 
                     <button
+                      type="button"
                       onClick={handleExportStudentsCSV}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 16px',
-                        background: '#16a34a',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                        fontWeight: 600
-                      }}
+                      className="dash-export-btn"
                     >
                       <Download size={14} />
                       Export Students (CSV)
@@ -1388,7 +1415,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Table */}
-                <div style={{ overflowX: 'auto' }}>
+                <div className="dash-table-wrap">
                   <table className="admin-table">
                     <thead>
                       <tr>
@@ -1513,7 +1540,7 @@ export default function Dashboard() {
 
             {/* SUBTAB 3: MANAGE TRAINING PROGRAMS */}
             {adminSubTab === 'programs' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '30px' }}>
+              <div className="dash-grid-2 dash-grid-2--wide">
                 <div className="dash-card">
                   <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <FilePlus style={{ color: '#FFB800' }} size={20} />
@@ -1575,7 +1602,7 @@ export default function Dashboard() {
 
             {/* SUBTAB 4: MANAGE QUIZZES (ADD QUESTIONS) */}
             {adminSubTab === 'quizzes' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+              <div className="dash-grid-2">
                 <div className="dash-card">
                   <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <PlusCircle style={{ color: '#16a34a' }} size={20} />
@@ -1618,7 +1645,7 @@ export default function Dashboard() {
                       />
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div className="dash-options-grid">
                       <div className="register-form-group">
                         <label>Option 1 *</label>
                         <input
