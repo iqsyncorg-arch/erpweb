@@ -1341,13 +1341,7 @@ function HomeContent({
             <p>ERP Digital Solution — delivering innovative, secure, and user-friendly digital solutions for businesses across industries. Chennai | Bengaluru | Hyderabad.</p>
           </div>
           <div className="footer-badges">
-            <h4>OUR INTEGRATION PARTNERS</h4>
-            <div className="badge-row">
-              <span className="partner-badge">ServiceNow</span>
-              <span className="partner-badge">Microsoft Gold</span>
-              <span className="partner-badge">LambdaTest</span>
-              <span className="partner-badge">Katalon Partner</span>
-            </div>
+          
           </div>
         </div>
 
