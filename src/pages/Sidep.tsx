@@ -286,6 +286,7 @@ export default function Sidep() {
 
           {/* CTA Buttons */}
           <div className="header-ctas">
+            <Link to="/login" className="btn btn-secondary" style={{ textDecoration: 'none' }}>Login</Link>
             <button className="btn btn-primary open-contact-btn" onClick={openContactModal}>Contact Us</button>
             <button
               className={`burger-menu-btn ${isMobileMenuOpen ? 'active' : ''}`}
@@ -364,6 +365,7 @@ export default function Sidep() {
             </li>
           </ul>
           <button className="btn btn-primary mobile-cta-btn open-contact-btn" onClick={openContactModal}>Contact Us</button>
+          <Link to="/login" className="btn btn-secondary mobile-cta-btn" style={{ marginTop: '12px', textDecoration: 'none', textAlign: 'center' }} onClick={() => setIsMobileMenuOpen(false)}>Login</Link>
         </div>
       </div>
 
@@ -416,8 +418,6 @@ export default function Sidep() {
             paddingBottom: '160px',
             textAlign: 'center',
           }}>
-
-
             <h1 style={{ fontSize: 'clamp(2.4rem, 5.5vw, 4.2rem)', fontWeight: 900, lineHeight: 1.1, color: '#fff', marginBottom: '8px', fontFamily: 'Montserrat, sans-serif' }}>
               ERP HUB Social
             </h1>
@@ -425,7 +425,6 @@ export default function Sidep() {
               Initiative & Digital<br />Empowerment Program
             </h1>
 
-            {/* Vision quote block */}
             <div style={{ borderLeft: '4px solid #FFB800', paddingLeft: '24px', marginBottom: '48px', textAlign: 'left', maxWidth: '680px', margin: '0 auto 48px' }}>
               <p style={{ color: 'rgba(255,255,255,0.78)', fontSize: '1.08rem', lineHeight: 1.85, margin: 0, fontStyle: 'italic' }}>
                 "To empower individuals and communities through technology, education, and digital innovation — enabling inclusive growth and sustainable career opportunities."
@@ -435,6 +434,9 @@ export default function Sidep() {
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
               <Link to="/sidep/register" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'linear-gradient(90deg, #FFB800, #FFD770)', color: '#0f172a', padding: '15px 36px', borderRadius: '50px', fontWeight: 800, fontSize: '15px', border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', boxShadow: '0 8px 32px rgba(255,184,0,0.4)', textDecoration: 'none' }}>
                 Join the Initiative <ArrowRight size={16} />
+              </Link>
+              <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.12)', color: '#fff', padding: '15px 36px', borderRadius: '50px', fontWeight: 700, fontSize: '15px', border: '1px solid rgba(255,255,255,0.25)', textDecoration: 'none', fontFamily: 'Montserrat, sans-serif' }}>
+                Login
               </Link>
             </div>
           </div>
@@ -464,6 +466,26 @@ export default function Sidep() {
           </div>
         </section>
 
+        <section style={{ padding: '80px 0', background: '#fff', borderTop: '1px solid #f1f5f9' }}>
+          <div style={{ width: '90%', maxWidth: '1200px', margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+              <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a', fontFamily: 'Montserrat, sans-serif', marginBottom: '12px' }}>
+                Learning in Action
+              </h2>
+              <p style={{ color: '#64748b', fontSize: '1rem', maxWidth: '560px', margin: '0 auto', lineHeight: 1.7 }}>
+                Real workshops, conferences, and mentoring sessions empowering adult learners across communities.
+              </p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+              {CONFERENCE_GALLERY.map((img) => (
+                <div key={img.src} style={{ borderRadius: '16px', overflow: 'hidden', boxShadow: '0 8px 24px rgba(15,23,42,0.08)', border: '1px solid #e2e8f0' }}>
+                  <img src={img.src} alt={img.alt} style={{ width: '100%', height: '220px', objectFit: 'cover', display: 'block' }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ══════════════════════════════════════════
             ABOUT THE INITIATIVE
         ══════════════════════════════════════════ */}
@@ -481,10 +503,10 @@ export default function Sidep() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '56px', alignItems: 'start', marginBottom: '64px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <p style={{ color: '#475569', fontSize: '1.05rem', lineHeight: 1.85, margin: 0 }}>
-                  The ERP HUB Social Initiative &amp; Digital Empowerment Program is a flagship Corporate Social Responsibility (CSR) initiative by ERP HUB Technologies, dedicated to creating a digitally empowered and inclusive society. We believe that access to quality education, digital skills, and career opportunities should be available to everyone, regardless of their economic or social background.
+                  The ERP HUB Social Initiative &amp; Digital Empowerment Program is a flagship voluntary Corporate Social Responsibility (CSR) initiative by ERP HUB Technologies, dedicated to creating a digitally empowered and inclusive society. We believe that access to quality education, digital skills, and career opportunities should be available to everyone, regardless of their economic or social background.
                 </p>
                 <p style={{ color: '#475569', fontSize: '1.05rem', lineHeight: 1.85, margin: 0 }}>
-                  Our initiative focuses on bridging the gap between education and industry by providing practical, industry-relevant training, career guidance, and digital literacy programs. Through strategic collaborations with educational institutions, corporate organizations, government bodies, NGOs, and community partners, we strive to equip students, job seekers, women, rural youth, entrepreneurs, and working professionals with the skills needed to thrive in today&apos;s digital economy.
+                  Our initiative focuses on bridging the gap between education and industry by providing practical, industry-relevant training, career guidance, and digital literacy programs. Through strategic collaborations with educational institutions, corporate organizations, NGO, we strive to equip students, job seekers, rural youth, and working professionals with the skills needed to thrive in today&apos;s digital economy.
                 </p>
               </div>
               <div>
@@ -501,7 +523,7 @@ export default function Sidep() {
                 We conduct workshops, awareness campaigns, skill development programs, certification courses, career mentoring, internship opportunities, and technology awareness sessions in emerging domains such as SAP ERP, Artificial Intelligence (AI), Data Analytics, Cloud Computing, Cyber Security, Web Technologies, and Digital Transformation.
               </p>
               <p style={{ color: '#475569', fontSize: '1.02rem', lineHeight: 1.85, margin: 0 }}>
-                Beyond technical training, our program also emphasizes soft skills, leadership, entrepreneurship, financial literacy, communication, and employability enhancement, ensuring holistic personal and professional development.
+                Beyond technical training, our program also emphasizes soft skills, leadership, communication, and employability enhancement, ensuring holistic personal and professional development.
               </p>
             </div>
 
@@ -522,25 +544,7 @@ export default function Sidep() {
         {/* ══════════════════════════════════════════
             CONFERENCE & TRAINING GALLERY
         ══════════════════════════════════════════ */}
-        <section style={{ padding: '80px 0', background: '#fff', borderTop: '1px solid #f1f5f9' }}>
-          <div style={{ width: '90%', maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-              <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a', fontFamily: 'Montserrat, sans-serif', marginBottom: '12px' }}>
-                Learning in Action
-              </h2>
-              <p style={{ color: '#64748b', fontSize: '1rem', maxWidth: '560px', margin: '0 auto', lineHeight: 1.7 }}>
-                Real workshops, conferences, and mentoring sessions empowering adult learners across communities.
-              </p>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-              {CONFERENCE_GALLERY.map((img) => (
-                <div key={img.src} style={{ borderRadius: '16px', overflow: 'hidden', boxShadow: '0 8px 24px rgba(15,23,42,0.08)', border: '1px solid #e2e8f0' }}>
-                  <img src={img.src} alt={img.alt} style={{ width: '100%', height: '220px', objectFit: 'cover', display: 'block' }} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+    
 
         {/* ══════════════════════════════════════════
             MISSION & VISION
