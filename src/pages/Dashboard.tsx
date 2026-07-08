@@ -21,18 +21,35 @@ import {
   Pencil,
   Menu,
   X,
+  CreditCard,
+  GraduationCap,
+  CalendarDays,
+  HelpCircle,
 } from 'lucide-react';
 import type { Question } from '../data/questions';
 import {
   authApi,
   adminApi,
   quizApi,
+  studentApi,
   getAuthUser,
   getToken,
   setAuth,
   clearAuth,
+  isAuthError,
   type AuthUser,
+  type StudentProgress,
+  type PaymentSubmissionRecord,
+  type ScheduleEntry,
 } from '../api/client';
+import AdminPaymentsPanel, { PAYMENTS_PAGE_SIZE } from '../components/admin/AdminPaymentsPanel';
+import {
+  StudentPaymentTab,
+  StudentCertificationTab,
+  StudentScheduleTab,
+} from '../components/student/StudentLearnerTabs';
+import StudentSupportTab from '../components/student/StudentSupportTab';
+import AdminSupportPanel from '../components/admin/AdminSupportPanel';
 
 interface QuizAttempt {
   id: string;
@@ -59,12 +76,37 @@ interface RegisteredStudent {
   workStatus: string;
   reason: string;
   registeredAt: string;
+  paymentStatus: 'unpaid' | 'pending' | 'paid';
   quizAttended: boolean;
   quizProgram: string | null;
   quizScore: number | null;
   quizTotalQuestions: number | null;
   quizCouponCode: string | null;
   quizAttemptedAt: string | null;
+}
+
+const STUDENTS_PAGE_SIZE = 10;
+const ATTEMPTS_PAGE_SIZE = 10;
+
+function buildPageList(current: number, total: number): (number | 'ellipsis')[] {
+  if (total <= 1) return total === 0 ? [] : [1];
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+
+  const items: (number | 'ellipsis')[] = [];
+  const push = (value: number | 'ellipsis') => {
+    if (items[items.length - 1] !== value) items.push(value);
+  };
+
+  push(1);
+  if (current > 3) push('ellipsis');
+
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  for (let page = start; page <= end; page += 1) push(page);
+
+  if (current < total - 2) push('ellipsis');
+  push(total);
+  return items;
 }
 
 export default function Dashboard() {
@@ -75,12 +117,12 @@ export default function Dashboard() {
   const [loadError, setLoadError] = useState('');
 
   const isAdmin = authUser?.role === 'admin';
-  // 'dashboard' or 'quiz'
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'quiz'>('dashboard');
+  type StudentTab = 'dashboard' | 'quiz' | 'payment' | 'certification' | 'schedule' | 'support';
+  const [activeTab, setActiveTab] = useState<StudentTab>('dashboard');
 
   // --- Admin Navigation Sub-Tabs ---
   // 'attempts' or 'students' or 'programs' or 'quizzes'
-  const [adminSubTab, setAdminSubTab] = useState<'attempts' | 'students' | 'programs' | 'quizzes'>('attempts');
+  const [adminSubTab, setAdminSubTab] = useState<'attempts' | 'students' | 'programs' | 'quizzes' | 'schedule' | 'payments' | 'support'>('attempts');
 
   // --- Quiz Flow States ---
   const [quizStatus, setQuizStatus] = useState<'selection' | 'assessment' | 'result'>('selection');
@@ -94,6 +136,11 @@ export default function Dashboard() {
     scorePercent: number;
     couponCode: string;
     generatedTime: string;
+    scholarshipEarned: boolean;
+    canRetake: boolean;
+    attemptCount: number;
+    maxAttempts: number;
+    passPercentRequired: number;
   } | null>(null);
 
   const [countdown, setCountdown] = useState<string>('');
@@ -120,8 +167,32 @@ export default function Dashboard() {
   // --- Registered Students State (for Admin) ---
   const [registeredStudents, setRegisteredStudents] = useState<RegisteredStudent[]>([]);
   const [studentSearchQuery, setStudentSearchQuery] = useState<string>('');
+  const [debouncedStudentSearch, setDebouncedStudentSearch] = useState<string>('');
   const [studentsPage, setStudentsPage] = useState<number>(1);
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [totalAttempts, setTotalAttempts] = useState(0);
+  const [isStudentsLoading, setIsStudentsLoading] = useState(false);
+  const [isAttemptsLoading, setIsAttemptsLoading] = useState(false);
+  const [deletingStudentId, setDeletingStudentId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [studentProgress, setStudentProgress] = useState<StudentProgress | null>(null);
+  const [isPaying, setIsPaying] = useState(false);
+  const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [adminScheduleEntries, setAdminScheduleEntries] = useState<ScheduleEntry[]>([]);
+  const [scheduleTitle, setScheduleTitle] = useState('');
+  const [scheduleDescription, setScheduleDescription] = useState('');
+  const [scheduleProgram, setScheduleProgram] = useState('');
+  const [scheduleStartDate, setScheduleStartDate] = useState('');
+  const [scheduleEndDate, setScheduleEndDate] = useState('');
+  const [scheduleFile, setScheduleFile] = useState<File | null>(null);
+  const [isUploadingSchedule, setIsUploadingSchedule] = useState(false);
+  const [paymentSubmissions, setPaymentSubmissions] = useState<PaymentSubmissionRecord[]>([]);
+  const [totalPayments, setTotalPayments] = useState(0);
+  const [paymentsPage, setPaymentsPage] = useState(1);
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
+  const [isPaymentsLoading, setIsPaymentsLoading] = useState(false);
+  const [reviewingPaymentId, setReviewingPaymentId] = useState<string | null>(null);
 
   const mapAttempt = (a: Record<string, unknown>): QuizAttempt => ({
     id: String(a.id),
@@ -129,10 +200,38 @@ export default function Dashboard() {
     program: String(a.program),
     score: Number(a.score),
     totalQuestions: Number(a.totalQuestions),
-    couponCode: String(a.couponCode),
+    couponCode: a.couponCode ? String(a.couponCode) : '',
     generatedAt: new Date(String(a.generatedAt)).toISOString(),
     status: String(a.status || 'completed'),
   });
+
+  const mapQuizResultFromAttempt = (
+    att: Record<string, unknown>,
+    meta: {
+      scholarshipEarned: boolean;
+      canRetake: boolean;
+      attemptCount: number;
+      maxAttempts: number;
+      passPercentRequired: number;
+    },
+    scholarshipCode?: string
+  ) => {
+    const score = Number(att.score);
+    const total = Number(att.totalQuestions);
+    const generatedTime = new Date(String(att.generatedAt)).toISOString();
+    return {
+      correct: score,
+      wrong: total - score,
+      scorePercent: Math.round((score / total) * 100),
+      couponCode: scholarshipCode || (att.couponCode ? String(att.couponCode) : ''),
+      generatedTime,
+      scholarshipEarned: meta.scholarshipEarned,
+      canRetake: meta.canRetake,
+      attemptCount: meta.attemptCount,
+      maxAttempts: meta.maxAttempts,
+      passPercentRequired: meta.passPercentRequired,
+    };
+  };
 
   const mapStudent = (s: Record<string, unknown>): RegisteredStudent => ({
     id: String(s.id),
@@ -148,6 +247,7 @@ export default function Dashboard() {
     workStatus: String(s.workStatus),
     reason: String(s.reason || ''),
     registeredAt: new Date(String(s.registeredAt)).toISOString(),
+    paymentStatus: s.paymentStatus ? (s.paymentStatus as 'unpaid' | 'pending' | 'paid') : 'unpaid',
     quizAttended: Boolean(s.quizAttended),
     quizProgram: s.quizProgram ? String(s.quizProgram) : null,
     quizScore: s.quizScore != null ? Number(s.quizScore) : null,
@@ -157,15 +257,39 @@ export default function Dashboard() {
   });
 
   const reloadAdminData = useCallback(async () => {
-    const [studentsRes, attemptsRes, questionsRes] = await Promise.all([
-      adminApi.getStudents(studentSearchQuery),
-      quizApi.getAttempts(adminProgramFilter),
-      quizApi.getAdminQuestions(),
-    ]);
-    setRegisteredStudents(studentsRes.data.map(mapStudent));
-    setAttempts(attemptsRes.data.map(mapAttempt));
-    setActiveQuestions(questionsRes.data as Record<string, Question[]>);
-  }, [adminProgramFilter, studentSearchQuery]);
+    setIsStudentsLoading(true);
+    setIsAttemptsLoading(true);
+    try {
+      const [studentsRes, attemptsRes, questionsRes, scheduleRes] = await Promise.all([
+        adminApi.getStudents(debouncedStudentSearch, studentsPage, STUDENTS_PAGE_SIZE),
+        quizApi.getAttempts(adminProgramFilter, attemptsPage, ATTEMPTS_PAGE_SIZE),
+        quizApi.getAdminQuestions(),
+        adminApi.getSchedule().catch(() => ({ success: true, data: [] as ScheduleEntry[] })),
+      ]);
+      setRegisteredStudents(studentsRes.data.map(mapStudent));
+      setTotalStudents(studentsRes.pagination?.total ?? studentsRes.data.length);
+      setAttempts(attemptsRes.data.map(mapAttempt));
+      setTotalAttempts(attemptsRes.pagination?.total ?? attemptsRes.data.length);
+      setActiveQuestions(questionsRes.data as Record<string, Question[]>);
+      setAdminScheduleEntries(scheduleRes.data);
+    } finally {
+      setIsStudentsLoading(false);
+      setIsAttemptsLoading(false);
+    }
+  }, [adminProgramFilter, debouncedStudentSearch, studentsPage, attemptsPage]);
+
+  const loadAdminPayments = useCallback(async () => {
+    setIsPaymentsLoading(true);
+    try {
+      const res = await adminApi.getPayments(paymentStatusFilter, paymentsPage, PAYMENTS_PAGE_SIZE);
+      setPaymentSubmissions(res.data);
+      setTotalPayments(res.pagination?.total ?? res.data.length);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Failed to load payments');
+    } finally {
+      setIsPaymentsLoading(false);
+    }
+  }, [paymentStatusFilter, paymentsPage]);
 
   const reloadStudentData = useCallback(async () => {
     const [programsRes, latestRes] = await Promise.all([
@@ -174,18 +298,36 @@ export default function Dashboard() {
     ]);
     setProgramList(programsRes.data);
 
+    try {
+      const progressRes = await studentApi.getProgress();
+      setStudentProgress(progressRes.progress);
+    } catch {
+      setStudentProgress(null);
+    }
+
+    setScheduleLoading(true);
+    try {
+      const scheduleRes = await studentApi.getSchedule();
+      setScheduleEntries(scheduleRes.data);
+    } catch {
+      setScheduleEntries([]);
+    } finally {
+      setScheduleLoading(false);
+    }
+
     if (latestRes.attempt) {
       const att = latestRes.attempt;
-      const score = Number(att.score);
-      const total = Number(att.totalQuestions);
-      const generatedTime = new Date(String(att.generatedAt)).toISOString();
-      setQuizResult({
-        correct: score,
-        wrong: total - score,
-        scorePercent: Math.round((score / total) * 100),
-        couponCode: String(att.couponCode),
-        generatedTime,
-      });
+      const meta = {
+        scholarshipEarned: Boolean(latestRes.scholarshipEarned),
+        canRetake: Boolean(latestRes.canRetake),
+        attemptCount: Number(latestRes.attemptCount ?? 1),
+        maxAttempts: Number(latestRes.maxAttempts ?? 3),
+        passPercentRequired: Number(latestRes.passPercentRequired ?? 50),
+      };
+      const scholarshipCode = latestRes.passingAttempt?.couponCode
+        ? String(latestRes.passingAttempt.couponCode)
+        : '';
+      setQuizResult(mapQuizResultFromAttempt(att, meta, scholarshipCode));
       setSelectedProgram(String(att.program));
       setQuizStatus('result');
     } else {
@@ -227,13 +369,12 @@ export default function Dashboard() {
         }
       } catch (err) {
         if (!cancelled) {
-          const message = err instanceof Error ? err.message : 'Failed to load dashboard';
-          if (message.toLowerCase().includes('token') || message.toLowerCase().includes('unauthorized')) {
+          if (isAuthError(err)) {
             clearAuth();
             navigate('/login');
-          } else {
-            setLoadError(message);
+            return;
           }
+          setLoadError(err instanceof Error ? err.message : 'Failed to load dashboard');
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -250,7 +391,7 @@ export default function Dashboard() {
     reloadAdminData().catch((err) => {
       setLoadError(err instanceof Error ? err.message : 'Failed to refresh admin data');
     });
-  }, [authUser, isAdmin, adminProgramFilter, studentSearchQuery, reloadAdminData]);
+  }, [authUser, isAdmin, adminProgramFilter, debouncedStudentSearch, studentsPage, attemptsPage, reloadAdminData]);
 
   // Reset pagination pages when filters change
   useEffect(() => {
@@ -258,8 +399,24 @@ export default function Dashboard() {
   }, [adminProgramFilter]);
 
   useEffect(() => {
-    setStudentsPage(1);
+    const timer = window.setTimeout(() => setDebouncedStudentSearch(studentSearchQuery), 300);
+    return () => window.clearTimeout(timer);
   }, [studentSearchQuery]);
+
+  useEffect(() => {
+    setStudentsPage(1);
+  }, [debouncedStudentSearch]);
+
+  useEffect(() => {
+    setPaymentsPage(1);
+  }, [paymentStatusFilter]);
+
+  useEffect(() => {
+    if (!authUser || !isAdmin || adminSubTab !== 'payments') return;
+    loadAdminPayments().catch((err) => {
+      setLoadError(err instanceof Error ? err.message : 'Failed to load payments');
+    });
+  }, [authUser, isAdmin, adminSubTab, loadAdminPayments]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -278,9 +435,108 @@ export default function Dashboard() {
 
   const closeSidebar = () => setSidebarOpen(false);
 
+  const goToStudentTab = (tab: StudentTab) => {
+    setActiveTab(tab);
+    closeSidebar();
+  };
+
+  const handleSubmitPayment = async (payload: {
+    billingName: string;
+    billingEmail: string;
+    billingAddress: string;
+    mobile: string;
+    transactionId: string;
+    useScholarship: boolean;
+    amount: number;
+    notes?: string;
+    screenshot: File;
+  }) => {
+    setIsPaying(true);
+    setLoadError('');
+    try {
+      await studentApi.submitPayment(payload);
+      await reloadStudentData();
+      alert('Payment proof submitted successfully! Our team will verify and activate your enrollment shortly.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Payment submission failed';
+      setLoadError(message);
+      throw err;
+    } finally {
+      setIsPaying(false);
+    }
+  };
+
+  const handleUploadSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!scheduleTitle.trim() || !scheduleStartDate) {
+      alert('Please enter a title and start date.');
+      return;
+    }
+    setIsUploadingSchedule(true);
+    try {
+      await adminApi.uploadSchedule({
+        title: scheduleTitle.trim(),
+        description: scheduleDescription.trim() || undefined,
+        program: scheduleProgram || undefined,
+        startDate: scheduleStartDate,
+        endDate: scheduleEndDate || undefined,
+        file: scheduleFile ?? undefined,
+      });
+      await reloadAdminData();
+      setScheduleTitle('');
+      setScheduleDescription('');
+      setScheduleProgram('');
+      setScheduleStartDate('');
+      setScheduleEndDate('');
+      setScheduleFile(null);
+      alert('Schedule uploaded successfully!');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to upload schedule');
+    } finally {
+      setIsUploadingSchedule(false);
+    }
+  };
+
+  const handleDeleteSchedule = async (id: string) => {
+    if (!window.confirm('Delete this schedule entry?')) return;
+    try {
+      await adminApi.deleteSchedule(id);
+      await reloadAdminData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete schedule');
+    }
+  };
+
+  const handleApprovePayment = async (id: string) => {
+    if (!window.confirm('Approve this payment? A confirmation email will be sent to the student.')) return;
+    setReviewingPaymentId(id);
+    try {
+      await adminApi.approvePayment(id);
+      await loadAdminPayments();
+      alert('Payment approved. Confirmation email sent to the student.');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to approve payment');
+    } finally {
+      setReviewingPaymentId(null);
+    }
+  };
+
+  const handleRejectPayment = async (id: string, reason: string) => {
+    setReviewingPaymentId(id);
+    try {
+      await adminApi.rejectPayment(id, reason);
+      await loadAdminPayments();
+      alert('Payment rejected. The student can resubmit payment proof.');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to reject payment');
+    } finally {
+      setReviewingPaymentId(null);
+    }
+  };
+
   // Update Countdown Live Timer
   useEffect(() => {
-    if (!quizResult) return;
+    if (!quizResult?.scholarshipEarned || !quizResult.couponCode) return;
     const updateTimer = () => {
       const generatedTime = new Date(quizResult.generatedTime).getTime();
       const expiryTime = generatedTime + 72 * 60 * 60 * 1000;
@@ -327,6 +583,11 @@ export default function Dashboard() {
     }
   };
 
+  const handleRetakeQuiz = async () => {
+    if (!selectedProgram || !quizResult?.canRetake) return;
+    await handleStartQuiz();
+  };
+
   // Handle option choice click
   const handleOptionSelect = (qIdx: number, optIdx: number) => {
     setUserAnswers(prev => ({ ...prev, [qIdx]: optIdx }));
@@ -348,8 +609,13 @@ export default function Dashboard() {
         correct: res.result.correct,
         wrong: res.result.wrong,
         scorePercent: Math.round(res.result.scorePercent),
-        couponCode: res.result.couponCode,
+        couponCode: res.result.couponCode || '',
         generatedTime: new Date(String(res.result.generatedTime)).toISOString(),
+        scholarshipEarned: res.result.scholarshipEarned,
+        canRetake: res.result.canRetake,
+        attemptCount: res.result.attemptCount,
+        maxAttempts: res.result.maxAttempts,
+        passPercentRequired: res.result.passPercentRequired,
       };
 
       setQuizResult(result);
@@ -357,6 +623,8 @@ export default function Dashboard() {
 
       if (authUser?.role === 'admin') {
         await reloadAdminData();
+      } else {
+        await reloadStudentData();
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to submit quiz');
@@ -366,13 +634,19 @@ export default function Dashboard() {
   };
 
   // Format Helper
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
+
   const formatDateTime = (isoString: string) => {
     const d = new Date(isoString);
     return `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   };
 
   // Expiry Checker
-  const getScholarshipStatus = (isoString: string) => {
+  const getScholarshipStatus = (isoString: string, hasCode = true) => {
+    if (!hasCode) {
+      return { expired: true, text: 'Not Earned' };
+    }
     const generatedTime = new Date(isoString).getTime();
     const expiryTime = generatedTime + 72 * 60 * 60 * 1000;
     const now = Date.now();
@@ -387,63 +661,76 @@ export default function Dashboard() {
   };
 
   // CSV Export for Quiz Attempts
-  const handleExportAttemptsCSV = () => {
-    const csvHeaders = ['Candidate Name', 'Selected Program', 'Score', 'Scholarship Code', 'Generated At', 'Expiry Status'];
-    const csvRows = attempts.map(att => {
-      const { text } = getScholarshipStatus(att.generatedAt);
-      return [
-        `"${att.candidateName}"`,
-        `"${att.program}"`,
-        `"${att.score}/${att.totalQuestions}"`,
-        `"${att.couponCode}"`,
-        `"${formatDateTime(att.generatedAt)}"`,
-        `"${text}"`
-      ];
-    });
+  const handleExportAttemptsCSV = async () => {
+    try {
+      const res = await quizApi.getAttempts(adminProgramFilter, 1, 10000);
+      const allAttempts = res.data.map(mapAttempt);
+      const csvHeaders = ['Candidate Name', 'Selected Program', 'Score', 'Scholarship Code', 'Generated At', 'Expiry Status'];
+      const csvRows = allAttempts.map(att => {
+        const { text } = getScholarshipStatus(att.generatedAt, !!att.couponCode);
+        return [
+          `"${att.candidateName}"`,
+          `"${att.program}"`,
+          `"${att.score}/${att.totalQuestions}"`,
+          `"${att.couponCode || 'Not Earned'}"`,
+          `"${formatDateTime(att.generatedAt)}"`,
+          `"${text}"`
+        ];
+      });
 
-    const csvContent = [csvHeaders.join(','), ...csvRows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `SIDEP_Quiz_Attempts_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const csvContent = [csvHeaders.join(','), ...csvRows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `SIDEP_Quiz_Attempts_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to export attempts');
+    }
   };
 
   // CSV Export for Registered Students
-  const handleExportStudentsCSV = () => {
-    const csvHeaders = ['Full Name', 'Email ID', 'Mobile Number', 'Date of Birth', 'Gender', 'Aadhaar Number', 'College Name', 'Student Status', 'Working Status', 'Quiz Attended', 'Quiz Program', 'Quiz Score', 'Registered At'];
-    const csvRows = registeredStudents.map(std => {
-      return [
-        `"${std.fullName}"`,
-        `"${std.email}"`,
-        `"${std.mobile}"`,
-        `"${formatDob(std.dob)}"`,
-        `"${std.gender}"`,
-        `"${std.aadhaar}"`,
-        `"${std.college}"`,
-        `"${std.studentStatus}"`,
-        `"${std.workStatus}"`,
-        `"${std.quizAttended ? 'Yes' : 'No'}"`,
-        `"${std.quizProgram || '—'}"`,
-        std.quizAttended && std.quizScore != null && std.quizTotalQuestions != null
-          ? `"${std.quizScore}/${std.quizTotalQuestions}"`
-          : '"—"',
-        `"${formatDateTime(std.registeredAt)}"`
-      ];
-    });
+  const handleExportStudentsCSV = async () => {
+    try {
+      const res = await adminApi.getStudents(debouncedStudentSearch, 1, 10000);
+      const allStudents = res.data.map(mapStudent);
+      const csvHeaders = ['Full Name', 'Email ID', 'Mobile Number', 'Date of Birth', 'Gender', 'Aadhaar Number', 'College Name', 'Student Status', 'Working Status', 'Paid', 'Quiz Attended', 'Quiz Program', 'Quiz Score', 'Registered At'];
+      const csvRows = allStudents.map(std => {
+        return [
+          `"${std.fullName}"`,
+          `"${std.email}"`,
+          `"${std.mobile}"`,
+          `"${formatDob(std.dob)}"`,
+          `"${std.gender}"`,
+          `"${std.aadhaar}"`,
+          `"${std.college}"`,
+          `"${std.studentStatus}"`,
+          `"${std.workStatus}"`,
+          `"${std.paymentStatus === 'paid' ? 'Yes' : std.paymentStatus === 'pending' ? 'Pending' : 'No'}"`,
+          `"${std.quizAttended ? 'Yes' : 'No'}"`,
+          `"${std.quizProgram || '—'}"`,
+          std.quizAttended && std.quizScore != null && std.quizTotalQuestions != null
+            ? `"${std.quizScore}/${std.quizTotalQuestions}"`
+            : '"—"',
+          `"${formatDateTime(std.registeredAt)}"`
+        ];
+      });
 
-    const csvContent = [csvHeaders.join(','), ...csvRows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `SIDEP_Registered_Students_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const csvContent = [csvHeaders.join(','), ...csvRows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `SIDEP_Registered_Students_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to export students');
+    }
   };
 
   const handleRefreshAdminData = async () => {
@@ -564,11 +851,36 @@ export default function Dashboard() {
   // ADMIN ACTION: Delete a student registration
   const handleDeleteStudent = async (studentId: string) => {
     if (!window.confirm('Are you sure you want to remove this registered student record?')) return;
+
+    if (!getToken()) {
+      clearAuth();
+      navigate('/login');
+      return;
+    }
+
+    setDeletingStudentId(studentId);
     try {
+      const meRes = await authApi.me();
+      const token = getToken();
+      if (token) setAuth(token, meRes.user);
+      setAuthUser(meRes.user);
+
       await adminApi.deleteStudent(studentId);
-      await reloadAdminData();
+
+      if (registeredStudents.length === 1 && studentsPage > 1) {
+        setStudentsPage((page) => page - 1);
+      } else {
+        await reloadAdminData();
+      }
     } catch (err) {
+      if (isAuthError(err)) {
+        clearAuth();
+        navigate('/login');
+        return;
+      }
       alert(err instanceof Error ? err.message : 'Failed to delete student');
+    } finally {
+      setDeletingStudentId(null);
     }
   };
 
@@ -660,24 +972,77 @@ export default function Dashboard() {
     }
   };
 
-  // --- Pagination & Filtering Variables ---
-  const attemptsPageSize = 3;
-  const filteredAttempts = attempts.filter(att => adminProgramFilter === 'All' || att.program === adminProgramFilter);
-  const totalAttemptsPages = Math.ceil(filteredAttempts.length / attemptsPageSize);
-  const paginatedAttempts = filteredAttempts.slice((attemptsPage - 1) * attemptsPageSize, attemptsPage * attemptsPageSize);
+  // --- Pagination Variables ---
+  const attemptsPageSize = ATTEMPTS_PAGE_SIZE;
+  const totalAttemptsPages = Math.max(1, Math.ceil(totalAttempts / attemptsPageSize));
+  const attemptsShowingFrom = totalAttempts === 0 ? 0 : (attemptsPage - 1) * attemptsPageSize + 1;
+  const attemptsShowingTo = Math.min(attemptsPage * attemptsPageSize, totalAttempts);
+  const attemptPageNumbers = buildPageList(attemptsPage, totalAttemptsPages);
 
-  const studentsPageSize = 3;
-  const filteredStudents = registeredStudents.filter(std => {
-    const query = studentSearchQuery.toLowerCase();
-    return std.fullName.toLowerCase().includes(query) || std.college.toLowerCase().includes(query);
-  });
-  const totalStudentsPages = Math.ceil(filteredStudents.length / studentsPageSize);
-  const paginatedStudents = filteredStudents.slice((studentsPage - 1) * studentsPageSize, studentsPage * studentsPageSize);
+  const studentsPageSize = STUDENTS_PAGE_SIZE;
+  const totalStudentsPages = Math.max(1, Math.ceil(totalStudents / studentsPageSize));
+  const studentsShowingFrom = totalStudents === 0 ? 0 : (studentsPage - 1) * studentsPageSize + 1;
+  const studentsShowingTo = Math.min(studentsPage * studentsPageSize, totalStudents);
+  const studentPageNumbers = buildPageList(studentsPage, totalStudentsPages);
 
   const userInitials = authUser?.fullName
     ? authUser.fullName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
     : 'U';
   const firstName = authUser?.fullName?.split(' ')[0] || 'Learner';
+
+  const studentPageMeta: Record<StudentTab, { title: string; subtitle: string; mobile: string }> = {
+    dashboard: {
+      title: `Welcome back, ${firstName}!`,
+      subtitle: 'Digital Empowerment & Skill Validation Hub.',
+      mobile: `Hi, ${firstName}`,
+    },
+    quiz: {
+      title: 'SIDEP Assessment',
+      subtitle: 'Complete your skills validation assessment.',
+      mobile: 'SIDEP Assessment',
+    },
+    payment: {
+      title: 'Program Payment',
+      subtitle: 'Pay via bank transfer or UPI, then submit your payment proof for verification.',
+      mobile: 'Program Payment',
+    },
+    certification: {
+      title: 'Certification',
+      subtitle: 'Your SIDEP program certificate and enrollment credentials.',
+      mobile: 'Certification',
+    },
+    schedule: {
+      title: 'Schedule Calendar',
+      subtitle: 'Training sessions, class dates, and downloadable schedule files.',
+      mobile: 'Schedule',
+    },
+    support: {
+      title: 'Support Desk',
+      subtitle: 'Submit support tickets and view assistance history.',
+      mobile: 'Support',
+    },
+  };
+
+  const paymentFormDefaults = {
+    fullName: authUser?.fullName || '',
+    email: authUser?.email || '',
+    mobile: authUser?.mobile || '',
+    address: authUser?.address || '',
+  };
+
+  const learnerTabProps = studentProgress
+    ? {
+        progress: studentProgress,
+        scholarshipCountdown: countdown,
+        isPaying,
+        onPay: () => {},
+        onGoToQuiz: () => goToStudentTab('quiz'),
+        onGoToPayment: () => goToStudentTab('payment'),
+        formDefaults: paymentFormDefaults,
+        onSubmitPayment: handleSubmitPayment,
+      }
+    : null;
+
   const formatMobile = (mobile?: string) => {
     if (!mobile) return '—';
     const digits = mobile.replace(/\D/g, '');
@@ -689,6 +1054,12 @@ export default function Dashboard() {
     const d = new Date(dob);
     return Number.isNaN(d.getTime()) ? dob : d.toLocaleDateString('en-IN');
   };
+
+  const canStartQuiz =
+    !!selectedProgram &&
+    (programList.find((p) => p.name === selectedProgram)?.questionCount ?? 0) === 10 &&
+    (!quizResult || quizResult.canRetake) &&
+    !quizResult?.scholarshipEarned;
 
   if (isLoading) {
     return (
@@ -713,7 +1084,7 @@ export default function Dashboard() {
         <div className="dash-mobile-title">
           <span className="dash-mobile-brand">ERP Digital Portal</span>
           <span className="dash-mobile-subtitle">
-            {isAdmin ? 'Admin Dashboard' : activeTab === 'dashboard' ? `Hi, ${firstName}` : 'SIDEP Assessment'}
+            {isAdmin ? 'Admin Dashboard' : studentPageMeta[activeTab].mobile}
           </span>
         </div>
       </header>
@@ -765,22 +1136,71 @@ export default function Dashboard() {
                 <PlusCircle size={18} />
                 Manage Quizzes
               </button>
+              <button
+                className={`dash-menu-item ${adminSubTab === 'payments' ? 'active' : ''}`}
+                onClick={() => { setAdminSubTab('payments'); closeSidebar(); }}
+              >
+                <CreditCard size={18} />
+                Payment Reviews
+              </button>
+              <button
+                className={`dash-menu-item ${adminSubTab === 'schedule' ? 'active' : ''}`}
+                onClick={() => { setAdminSubTab('schedule'); closeSidebar(); }}
+              >
+                <CalendarDays size={18} />
+                Manage Schedule
+              </button>
+              <button
+                className={`dash-menu-item ${adminSubTab === 'support' ? 'active' : ''}`}
+                onClick={() => { setAdminSubTab('support'); closeSidebar(); }}
+              >
+                <HelpCircle size={18} />
+                Support Requests
+              </button>
             </>
           ) : (
             <>
               <button
                 className={`dash-menu-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-                onClick={() => { setActiveTab('dashboard'); closeSidebar(); }}
+                onClick={() => goToStudentTab('dashboard')}
               >
                 <LayoutDashboard size={18} />
                 Dashboard
               </button>
               <button
                 className={`dash-menu-item ${activeTab === 'quiz' ? 'active' : ''}`}
-                onClick={() => { setActiveTab('quiz'); closeSidebar(); }}
+                onClick={() => goToStudentTab('quiz')}
               >
                 <BookOpen size={18} />
                 Quiz
+              </button>
+              <button
+                className={`dash-menu-item ${activeTab === 'payment' ? 'active' : ''}`}
+                onClick={() => goToStudentTab('payment')}
+              >
+                <CreditCard size={18} />
+                Payment
+              </button>
+              <button
+                className={`dash-menu-item ${activeTab === 'schedule' ? 'active' : ''}`}
+                onClick={() => goToStudentTab('schedule')}
+              >
+                <CalendarDays size={18} />
+                Schedule
+              </button>
+              <button
+                className={`dash-menu-item ${activeTab === 'certification' ? 'active' : ''}`}
+                onClick={() => goToStudentTab('certification')}
+              >
+                <GraduationCap size={18} />
+                Certification
+              </button>
+              <button
+                className={`dash-menu-item ${activeTab === 'support' ? 'active' : ''}`}
+                onClick={() => goToStudentTab('support')}
+              >
+                <HelpCircle size={18} />
+                Support
               </button>
             </>
           )}
@@ -824,12 +1244,12 @@ export default function Dashboard() {
         <div className="dash-top-bar">
           <div className="dash-top-bar-text">
             <h1 className="dash-page-title">
-              {isAdmin ? 'Admin Dashboard' : activeTab === 'dashboard' ? `Welcome back, ${firstName}!` : 'SIDEP Assessment'}
+              {isAdmin ? 'Admin Dashboard' : studentPageMeta[activeTab].title}
             </h1>
             <p className="dash-page-subtitle">
               {isAdmin
                 ? 'Monitor quiz attempts, track registered students, configure training programs, and authorize evaluation quizzes.'
-                : 'Digital Empowerment & Skill Validation Hub.'}
+                : studentPageMeta[activeTab].subtitle}
             </p>
           </div>
 
@@ -884,7 +1304,13 @@ export default function Dashboard() {
                     <div>
                       <span style={{ fontSize: '13px', color: '#64748b', display: 'block' }}>Program Status</span>
                       <strong style={{ fontSize: '20px', fontWeight: 800 }}>
-                        {quizResult ? 'Assessment Completed' : 'Enrolled'}
+                        {quizResult
+                          ? quizResult.scholarshipEarned
+                            ? 'Assessment Completed'
+                            : quizResult.canRetake
+                              ? `Attempt ${quizResult.attemptCount}/${quizResult.maxAttempts}`
+                              : 'Attempts Exhausted'
+                          : 'Enrolled'}
                       </strong>
                     </div>
                   </div>
@@ -908,7 +1334,11 @@ export default function Dashboard() {
                     <div>
                       <span style={{ fontSize: '13px', color: '#64748b', display: 'block' }}>Scholarship Status</span>
                       <strong style={{ fontSize: '20px', fontWeight: 800 }}>
-                        {quizResult ? getScholarshipStatus(quizResult.generatedTime).text : 'No Scholarship Generated'}
+                        {!quizResult
+                          ? 'No Scholarship Generated'
+                          : quizResult.scholarshipEarned && quizResult.couponCode
+                            ? getScholarshipStatus(quizResult.generatedTime, true).text
+                            : 'Not Earned'}
                       </strong>
                     </div>
                   </div>
@@ -951,29 +1381,96 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {quizResult && (
-                    <div style={{ marginTop: '32px', background: '#f8fafc', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                      <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 12px 0' }}>
-                        <Award style={{ color: '#FFB800' }} size={20} />
-                        Your Active Scholarship Status
-                      </h4>
-                      <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px 0' }}>
-                        You completed the <strong>{selectedProgram}</strong> assessment. Here is your digital empowerment scholarship. Our team will contact you shortly.
-                      </p>
-                      
-                      <div style={{ display: 'inline-flex', alignItems: 'center', background: '#0f172a', padding: '12px 24px', borderRadius: '8px', border: '1px dashed #FFB800', color: '#FFB800', fontWeight: '800', fontSize: '20px', letterSpacing: '1px', marginBottom: '16px' }}>
-                        {quizResult.couponCode}
+                  {quizResult?.scholarshipEarned && quizResult.couponCode && (
+                    <div className="dash-grid-2" style={{ marginTop: '32px' }}>
+                      {/* Left container: Active Scholarship Status */}
+                      <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div>
+                          <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 12px 0' }}>
+                            <Award style={{ color: '#FFB800' }} size={20} />
+                            Your Active Scholarship Status
+                          </h4>
+                          <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px 0' }}>
+                            You completed the <strong>{selectedProgram}</strong> assessment. Here is your digital empowerment scholarship. Our team will contact you shortly.
+                          </p>
+                          
+                          <div style={{ display: 'inline-flex', alignItems: 'center', background: '#0f172a', padding: '12px 24px', borderRadius: '8px', border: '1px dashed #FFB800', color: '#FFB800', fontWeight: '800', fontSize: '20px', letterSpacing: '1px', marginBottom: '16px' }}>
+                            {quizResult.couponCode}
+                          </div>
+
+                          <div style={{ fontSize: '13px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <Clock size={14} />
+                              <span>Generated on: <strong>{formatDateTime(quizResult.generatedTime)}</strong></span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <Clock size={14} style={{ color: '#ef4444' }} />
+                              <span>Remaining Time: <strong style={{ color: '#ef4444', fontFamily: 'monospace', fontSize: '14px' }}>{countdown}</strong></span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
-                      <div style={{ fontSize: '13px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Clock size={14} />
-                          <span>Generated on: <strong>{formatDateTime(quizResult.generatedTime)}</strong></span>
+                      {/* Right container: Payment & Enrollment Status */}
+                      <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div>
+                          <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 12px 0' }}>
+                            <CreditCard style={{ color: '#0284c7' }} size={20} />
+                            Program Payment &amp; Enrollment
+                          </h4>
+                          
+                          {studentProgress?.paymentStatus === 'paid' ? (
+                            <>
+                              <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px 0' }}>
+                                Your enrollment has been verified. You now have full access to the program calendar and training modules.
+                              </p>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#dcfce7', color: '#16a34a', padding: '8px 16px', borderRadius: '8px', fontWeight: '700', fontSize: '14px', marginBottom: '16px' }}>
+                                <CheckCircle size={16} /> Paid &amp; Enrolled
+                              </div>
+                              <div style={{ fontSize: '13px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <div>Course: <strong>{studentProgress.enrolledProgram}</strong></div>
+                                <div>Amount Paid: <strong>{formatCurrency(studentProgress.paymentAmount ?? 0)}</strong></div>
+                              </div>
+                            </>
+                          ) : studentProgress?.paymentStatus === 'pending' || studentProgress?.paymentSubmission?.status === 'pending' ? (
+                            <>
+                              <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px 0' }}>
+                                Your payment proof is currently under review. Our team will verify the bank transaction reference and approve your access shortly.
+                              </p>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#fef3c7', color: '#d97706', padding: '8px 16px', borderRadius: '8px', fontWeight: '700', fontSize: '14px', marginBottom: '16px' }}>
+                                <Clock size={16} /> Under Review
+                              </div>
+                              <div style={{ fontSize: '13px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <div>Transaction ID: <strong>{studentProgress?.paymentSubmission?.transactionId || '—'}</strong></div>
+                                <div>Amount Submitted: <strong>{studentProgress?.paymentSubmission?.amount != null ? formatCurrency(studentProgress.paymentSubmission.amount) : '—'}</strong></div>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px 0' }}>
+                                Complete your payment to claim your scholarship discount and unlock access to the training sessions.
+                              </p>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#fee2e2', color: '#ef4444', padding: '8px 16px', borderRadius: '8px', fontWeight: '700', fontSize: '14px', marginBottom: '16px' }}>
+                                <AlertTriangle size={16} /> Unpaid
+                              </div>
+                              <div style={{ fontSize: '13px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <div>Standard Fee: <span style={{ textDecoration: 'line-through' }}>{formatCurrency(studentProgress?.pricing?.standard ?? 15000)}</span></div>
+                                <div>Scholarship Fee: <strong style={{ color: '#16a34a' }}>{formatCurrency(studentProgress?.pricing?.scholarship ?? 7500)}</strong></div>
+                              </div>
+                            </>
+                          )}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Clock size={14} style={{ color: '#ef4444' }} />
-                          <span>Remaining Time: <strong style={{ color: '#ef4444', fontFamily: 'monospace', fontSize: '14px' }}>{countdown}</strong></span>
-                        </div>
+
+                        {studentProgress?.paymentStatus !== 'paid' && studentProgress?.paymentStatus !== 'pending' && studentProgress?.paymentSubmission?.status !== 'pending' && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('payment')}
+                            className="dash-alert-action-btn"
+                            style={{ marginTop: '16px', alignSelf: 'flex-start', background: '#0284c7', borderColor: '#0284c7', color: '#fff', padding: '10px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                          >
+                            Make Payment <ChevronRight size={14} style={{ marginLeft: '4px' }} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -984,7 +1481,9 @@ export default function Dashboard() {
                         <AlertTriangle style={{ color: '#d97706' }} size={24} />
                         <div>
                           <strong style={{ color: '#92400e', fontSize: '14px' }}>Skills Assessment Pending</strong>
-                          <span style={{ display: 'block', fontSize: '13px', color: '#b45309' }}>Please take your assessment to unlock your program scholarship code.</span>
+                          <span style={{ display: 'block', fontSize: '13px', color: '#b45309' }}>
+                            Score 50% or higher to unlock your scholarship code. Up to 3 attempts allowed.
+                          </span>
                         </div>
                       </div>
                       <button
@@ -996,6 +1495,37 @@ export default function Dashboard() {
                       </button>
                     </div>
                   )}
+
+                  {quizResult && !quizResult.scholarshipEarned && quizResult.canRetake && (
+                    <div className="dash-alert-banner">
+                      <div className="dash-alert-banner-content">
+                        <AlertTriangle style={{ color: '#d97706' }} size={24} />
+                        <div>
+                          <strong style={{ color: '#92400e', fontSize: '14px' }}>Scholarship Not Earned Yet</strong>
+                          <span style={{ display: 'block', fontSize: '13px', color: '#b45309' }}>
+                            You scored {quizResult.scorePercent}% (need {quizResult.passPercentRequired}%+). Retake {quizResult.maxAttempts - quizResult.attemptCount} more time{quizResult.maxAttempts - quizResult.attemptCount === 1 ? '' : 's'} to earn your scholarship.
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setActiveTab('quiz'); handleRetakeQuiz(); }}
+                        className="dash-alert-action-btn"
+                      >
+                        Retake Quiz <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  )}
+
+                  {quizResult && !quizResult.scholarshipEarned && !quizResult.canRetake && (
+                    <div style={{ marginTop: '32px', background: '#fef2f2', padding: '20px', borderRadius: '12px', border: '1px solid #fecaca' }}>
+                      <strong style={{ color: '#991b1b', fontSize: '14px' }}>Maximum Attempts Reached</strong>
+                      <p style={{ color: '#b91c1c', fontSize: '13px', margin: '8px 0 0' }}>
+                        You used all {quizResult.maxAttempts} attempts without reaching {quizResult.passPercentRequired}%. You may still enroll with the standard fee.
+                      </p>
+                    </div>
+                  )}
+
                 </div>
               </div>
             )}
@@ -1005,24 +1535,29 @@ export default function Dashboard() {
               <div>
                 {/* Step 1: Program Selection */}
                 {quizStatus === 'selection' && (
-                  <div className="dash-card">
+                  <div className="dash-card dash-quiz-selection-panel">
                     <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>Select Your Training Program</h3>
                     <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '24px' }}>
-                      Choose the training program you want to validate. You can attempt the quiz only <strong>once</strong>. Once started, you cannot change your program.
+                      Choose the training program you want to validate. Score <strong>{quizResult?.passPercentRequired ?? 50}% or higher</strong> to earn your scholarship code. You get up to <strong>3 attempts</strong>.
+                      {quizResult && quizResult.attemptCount > 0 && (
+                        <> Your program <strong>{selectedProgram}</strong> is locked for remaining attempts.</>
+                      )}
                     </p>
 
-                    <div className="quiz-program-grid" style={{ marginBottom: '32px' }}>
+                    <div className="quiz-program-grid">
                       {programList.map(({ name: programName, questionCount: qCount }) => {
                         const isSelected = selectedProgram === programName;
+                        const programLocked = !!quizResult && quizResult.attemptCount > 0;
                         return (
                           <div
                             key={programName}
                             className={`program-card ${isSelected ? 'selected' : ''}`}
                             onClick={() => {
-                              if (!startedQuiz) {
+                              if (!startedQuiz && !programLocked) {
                                 setSelectedProgram(programName);
                               }
                             }}
+                            style={programLocked && !isSelected ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
                           >
                             <BookOpen size={24} style={{ color: isSelected ? '#FFB800' : '#64748b', margin: '0 auto 12px' }} />
                             <h4 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 6px 0' }}>{programName}</h4>
@@ -1032,26 +1567,6 @@ export default function Dashboard() {
                           </div>
                         );
                       })}
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: '24px' }}>
-                      <button
-                        onClick={handleStartQuiz}
-                        disabled={!selectedProgram || (programList.find((p) => p.name === selectedProgram)?.questionCount ?? 0) !== 10}
-                        className="btn btn-primary"
-                        style={{
-                          background: '#0f172a',
-                          borderColor: '#0f172a',
-                          color: '#fff',
-                          padding: '12px 28px',
-                          fontSize: '14px',
-                          fontWeight: 700,
-                          opacity: (selectedProgram && (programList.find((p) => p.name === selectedProgram)?.questionCount ?? 0) === 10) ? 1 : 0.5,
-                          cursor: (selectedProgram && (programList.find((p) => p.name === selectedProgram)?.questionCount ?? 0) === 10) ? 'pointer' : 'not-allowed'
-                        }}
-                      >
-                        Start Assessment
-                      </button>
                     </div>
                   </div>
                 )}
@@ -1188,20 +1703,32 @@ export default function Dashboard() {
                 {/* Step 3: Result Screen */}
                 {quizStatus === 'result' && quizResult && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                    <div style={{ background: '#fee2e2', border: '1px solid #fecaca', padding: '16px', borderRadius: '8px', color: '#991b1b', fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <AlertTriangle size={18} />
-                      Quiz Already Completed. You are not allowed to retake this assessment.
-                    </div>
+                    {quizResult.scholarshipEarned ? (
+                      <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '16px', borderRadius: '8px', color: '#047857', fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <CheckCircle size={18} />
+                        Congratulations! You passed with {quizResult.scorePercent}% and earned your scholarship code.
+                      </div>
+                    ) : quizResult.canRetake ? (
+                      <div style={{ background: '#fffbeb', border: '1px solid #fde68a', padding: '16px', borderRadius: '8px', color: '#92400e', fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <AlertTriangle size={18} />
+                        Score below {quizResult.passPercentRequired}%. Attempt {quizResult.attemptCount} of {quizResult.maxAttempts} — retake to earn your scholarship.
+                      </div>
+                    ) : (
+                      <div style={{ background: '#fee2e2', border: '1px solid #fecaca', padding: '16px', borderRadius: '8px', color: '#991b1b', fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <AlertTriangle size={18} />
+                        All {quizResult.maxAttempts} attempts used. No scholarship earned — you may proceed with the standard enrollment fee.
+                      </div>
+                    )}
 
                     <div className="dash-card">
                       <h3 style={{ fontSize: '22px', fontWeight: 800, margin: '0 0 8px 0', color: '#1e293b' }}>
                         Assessment Results
                       </h3>
                       <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 24px 0' }}>
-                        Skill validation details for your program evaluation.
+                        Attempt {quizResult.attemptCount} of {quizResult.maxAttempts} · Scholarship requires {quizResult.passPercentRequired}% or higher.
                       </p>
 
-                      <div className="dash-grid-4">
+                      <div className="dash-grid-4" style={{ marginBottom: '24px' }}>
                         <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                           <span style={{ display: 'block', fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Selected Program</span>
                           <strong style={{ fontSize: '15px', color: '#0f172a', display: 'block', marginTop: '4px' }}>{selectedProgram}</strong>
@@ -1216,44 +1743,101 @@ export default function Dashboard() {
                         </div>
                         <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                           <span style={{ display: 'block', fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Final Score (%)</span>
-                          <strong style={{ fontSize: '20px', color: '#0284c7', display: 'block', marginTop: '4px' }}>{quizResult.scorePercent}%</strong>
+                          <strong style={{ fontSize: '20px', color: quizResult.scorePercent >= quizResult.passPercentRequired ? '#16a34a' : '#ef4444', display: 'block', marginTop: '4px' }}>{quizResult.scorePercent}%</strong>
                         </div>
                       </div>
 
-                      {/* Scholarship Box */}
-                      <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '24px', borderRadius: '12px', textAlign: 'center', marginBottom: '24px' }}>
-                        <div style={{ color: '#047857', fontWeight: 800, fontSize: '18px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                          <Award />
-                          Assessment Completed Successfully!
-                        </div>
-                        
-                        <div style={{ display: 'inline-flex', background: '#10b981', color: '#fff', fontSize: '24px', fontWeight: 900, padding: '10px 28px', borderRadius: '8px', letterSpacing: '2px', margin: '8px 0 16px' }}>
-                          {quizResult.couponCode}
-                        </div>
+                      {quizResult.scholarshipEarned && quizResult.couponCode && (
+                        <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '24px', borderRadius: '12px', textAlign: 'center', marginBottom: '24px' }}>
+                          <div style={{ color: '#047857', fontWeight: 800, fontSize: '18px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                            <Award />
+                            Scholarship Code Generated!
+                          </div>
 
-                        <p style={{ color: '#065f46', fontSize: '13px', maxWidth: '580px', margin: '0 auto 16px', lineHeight: 1.6 }}>
-                          "Congratulations! You have successfully completed the assessment. Your scholarship code is valid for 72 hours from the time of generation. Please use it before it expires. Our team will contact you shortly."
-                        </p>
+                          <div style={{ display: 'inline-flex', background: '#10b981', color: '#fff', fontSize: '24px', fontWeight: 900, padding: '10px 28px', borderRadius: '8px', letterSpacing: '2px', margin: '8px 0 16px' }}>
+                            {quizResult.couponCode}
+                          </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px', color: '#065f46', background: '#d1fae5', padding: '8px 16px', borderRadius: '6px', width: 'fit-content', margin: '0 auto' }}>
-                          <Clock size={16} style={{ color: '#ef4444' }} />
-                          <span>Remaining Time: <strong style={{ color: '#ef4444', fontFamily: 'monospace', fontSize: '14px' }}>{countdown}</strong></span>
+                          <p style={{ color: '#065f46', fontSize: '13px', maxWidth: '580px', margin: '0 auto 16px', lineHeight: 1.6 }}>
+                            Your scholarship code is valid for 72 hours from the time of generation. Use it on the Payment tab before it expires.
+                          </p>
+
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px', color: '#065f46', background: '#d1fae5', padding: '8px 16px', borderRadius: '6px', width: 'fit-content', margin: '0 auto' }}>
+                            <Clock size={16} style={{ color: '#ef4444' }} />
+                            <span>Remaining Time: <strong style={{ color: '#ef4444', fontFamily: 'monospace', fontSize: '14px' }}>{countdown}</strong></span>
+                          </div>
                         </div>
-                      </div>
+                      )}
 
-                      <div style={{ display: 'flex', justifyContent: 'flex-start', gap: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
                         <button
-                          onClick={() => setActiveTab('dashboard')}
+                          type="button"
+                          onClick={() => goToStudentTab('dashboard')}
                           className="btn btn-primary"
                           style={{ background: '#0f172a', borderColor: '#0f172a', color: '#fff' }}
                         >
                           Go to Dashboard Home
                         </button>
+                        {quizResult.canRetake && (
+                          <button
+                            type="button"
+                            onClick={handleRetakeQuiz}
+                            className="btn btn-primary"
+                            style={{ background: '#FFB800', borderColor: '#FFB800', color: '#0f172a' }}
+                          >
+                            Retake Assessment ({quizResult.maxAttempts - quizResult.attemptCount} left)
+                          </button>
+                        )}
+                        {(quizResult.scholarshipEarned || !quizResult.canRetake) && (
+                          <button
+                            type="button"
+                            onClick={() => goToStudentTab('payment')}
+                            className="btn btn-primary"
+                            style={{ background: quizResult.scholarshipEarned ? '#FFB800' : '#64748b', borderColor: quizResult.scholarshipEarned ? '#FFB800' : '#64748b', color: quizResult.scholarshipEarned ? '#0f172a' : '#fff' }}
+                          >
+                            Proceed to Payment
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
                 )}
               </div>
+            )}
+
+            {activeTab === 'payment' && learnerTabProps && (
+              <StudentPaymentTab {...learnerTabProps} />
+            )}
+
+            {activeTab === 'schedule' && learnerTabProps && (
+              <StudentScheduleTab
+                progress={learnerTabProps.progress}
+                scheduleEntries={scheduleEntries}
+                scheduleLoading={scheduleLoading}
+                onGoToQuiz={learnerTabProps.onGoToQuiz}
+                onGoToPayment={learnerTabProps.onGoToPayment!}
+              />
+            )}
+
+            {activeTab === 'certification' && learnerTabProps && (
+              <StudentCertificationTab {...learnerTabProps} />
+            )}
+
+            {activeTab === 'support' && (
+              <StudentSupportTab />
+            )}
+
+            {activeTab === 'quiz' && quizStatus === 'selection' && (
+              <button
+                type="button"
+                className="dash-floating-start-btn"
+                onClick={handleStartQuiz}
+                disabled={!canStartQuiz}
+                title={canStartQuiz ? `Start ${selectedProgram} assessment` : 'Select a program with 10 questions'}
+              >
+                Start Assessment
+                <ChevronRight size={18} />
+              </button>
             )}
           </>
         )}
@@ -1295,32 +1879,41 @@ export default function Dashboard() {
                 </div>
 
                 {/* Table */}
-                <div className="dash-table-wrap">
-                  <table className="admin-table">
+                <div className={`dash-table-wrap admin-students-table-wrap ${isAttemptsLoading ? 'is-loading' : ''}`}>
+                  <table className="admin-table admin-table--students">
                     <thead>
                       <tr>
+                        <th className="admin-table-col-num">#</th>
                         <th>Candidate Name</th>
-                        <th>Selected Program</th>
+                        <th>Program</th>
                         <th>Score</th>
                         <th>Scholarship Code</th>
-                        <th>Generated Date &amp; Time</th>
-                        <th>Scholarship Expiry Status</th>
+                        <th>Generated</th>
+                        <th>Expiry Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedAttempts.map(att => {
-                        const expiry = getScholarshipStatus(att.generatedAt);
+                      {isAttemptsLoading && attempts.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="admin-table-empty">Loading attempts...</td>
+                        </tr>
+                      ) : attempts.map((att, index) => {
+                        const expiry = getScholarshipStatus(att.generatedAt, !!att.couponCode);
+                        const scorePercent = Math.round((att.score / att.totalQuestions) * 100);
                         return (
                           <tr key={att.id}>
+                            <td className="admin-table-col-num">{attemptsShowingFrom + index}</td>
                             <td style={{ fontWeight: 600 }}>{att.candidateName}</td>
                             <td>{att.program}</td>
                             <td style={{ fontWeight: 600 }}>
-                              {att.score}/{att.totalQuestions} ({ (att.score / att.totalQuestions) * 100 }%)
+                              {att.score}/{att.totalQuestions} ({scorePercent}%)
                             </td>
                             <td>
-                              <code style={{ background: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', fontWeight: 700 }}>
-                                {att.couponCode}
-                              </code>
+                              {att.couponCode ? (
+                                <code className="admin-table-code">{att.couponCode}</code>
+                              ) : (
+                                <span style={{ color: '#94a3b8' }}>Not Earned</span>
+                              )}
                             </td>
                             <td>{formatDateTime(att.generatedAt)}</td>
                             <td>
@@ -1331,9 +1924,9 @@ export default function Dashboard() {
                           </tr>
                         );
                       })}
-                      {filteredAttempts.length === 0 && (
+                      {!isAttemptsLoading && attempts.length === 0 && (
                         <tr>
-                          <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
+                          <td colSpan={7} className="admin-table-empty">
                             No attempts match the filter criteria.
                           </td>
                         </tr>
@@ -1343,36 +1936,62 @@ export default function Dashboard() {
                 </div>
 
                 {/* Pagination Controls */}
-                {filteredAttempts.length > 0 && (
-                  <div className="pagination-container">
-                    <div>
-                      Showing <strong>{Math.min(filteredAttempts.length, (attemptsPage - 1) * attemptsPageSize + 1)}</strong> to{' '}
-                      <strong>{Math.min(filteredAttempts.length, attemptsPage * attemptsPageSize)}</strong> of{' '}
-                      <strong>{filteredAttempts.length}</strong> entries
+                {totalAttempts > 0 && (
+                  <div className="pagination-container pagination-container--enhanced">
+                    <div className="pagination-summary">
+                      Showing <strong>{attemptsShowingFrom}</strong>–<strong>{attemptsShowingTo}</strong> of{' '}
+                      <strong>{totalAttempts}</strong> attempts
+                      <span className="pagination-page-label"> · Page {attemptsPage} of {totalAttemptsPages}</span>
                     </div>
                     <div className="pagination-buttons">
                       <button
+                        type="button"
                         className="pagination-btn"
-                        onClick={() => setAttemptsPage(prev => Math.max(1, prev - 1))}
-                        disabled={attemptsPage === 1}
+                        onClick={() => setAttemptsPage(1)}
+                        disabled={attemptsPage === 1 || isAttemptsLoading}
+                        title="First page"
+                      >
+                        «
+                      </button>
+                      <button
+                        type="button"
+                        className="pagination-btn"
+                        onClick={() => setAttemptsPage((prev) => Math.max(1, prev - 1))}
+                        disabled={attemptsPage === 1 || isAttemptsLoading}
                       >
                         Previous
                       </button>
-                      {Array.from({ length: totalAttemptsPages }, (_, i) => i + 1).map(pNum => (
-                        <button
-                          key={pNum}
-                          className={`pagination-btn ${attemptsPage === pNum ? 'active' : ''}`}
-                          onClick={() => setAttemptsPage(pNum)}
-                        >
-                          {pNum}
-                        </button>
-                      ))}
+                      {attemptPageNumbers.map((pNum, idx) =>
+                        pNum === 'ellipsis' ? (
+                          <span key={`att-ellipsis-${idx}`} className="pagination-ellipsis">…</span>
+                        ) : (
+                          <button
+                            key={pNum}
+                            type="button"
+                            className={`pagination-btn ${attemptsPage === pNum ? 'active' : ''}`}
+                            onClick={() => setAttemptsPage(pNum)}
+                            disabled={isAttemptsLoading}
+                          >
+                            {pNum}
+                          </button>
+                        )
+                      )}
                       <button
+                        type="button"
                         className="pagination-btn"
-                        onClick={() => setAttemptsPage(prev => Math.min(totalAttemptsPages, prev + 1))}
-                        disabled={attemptsPage === totalAttemptsPages}
+                        onClick={() => setAttemptsPage((prev) => Math.min(totalAttemptsPages, prev + 1))}
+                        disabled={attemptsPage === totalAttemptsPages || isAttemptsLoading}
                       >
                         Next
+                      </button>
+                      <button
+                        type="button"
+                        className="pagination-btn"
+                        onClick={() => setAttemptsPage(totalAttemptsPages)}
+                        disabled={attemptsPage === totalAttemptsPages || isAttemptsLoading}
+                        title="Last page"
+                      >
+                        »
                       </button>
                     </div>
                   </div>
@@ -1415,60 +2034,69 @@ export default function Dashboard() {
                 </div>
 
                 {/* Table */}
-                <div className="dash-table-wrap">
-                  <table className="admin-table">
+                <div className={`dash-table-wrap admin-students-table-wrap ${isStudentsLoading ? 'is-loading' : ''}`}>
+                  <table className="admin-table admin-table--students">
                     <thead>
                       <tr>
+                        <th className="admin-table-col-num">#</th>
                         <th>Full Name</th>
                         <th>Email &amp; Mobile</th>
                         <th>DOB &amp; Gender</th>
-                        <th>Aadhaar Number</th>
-                        <th>College / Institution</th>
-                        <th>Status (Edu / Job)</th>
-                        <th>Quiz Status</th>
-                        <th>Registration Date</th>
-                        <th>Actions</th>
+                        <th>Aadhaar</th>
+                        <th>College</th>
+                        <th>Status</th>
+                        <th>Paid</th>
+                        <th>Quiz</th>
+                        <th>Registered</th>
+                        <th className="admin-table-col-actions">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedStudents.map(std => (
+                      {isStudentsLoading && registeredStudents.length === 0 ? (
+                        <tr>
+                          <td colSpan={11} className="admin-table-empty">
+                            Loading students...
+                          </td>
+                        </tr>
+                      ) : registeredStudents.map((std, index) => (
                         <tr key={std.id}>
+                          <td className="admin-table-col-num">{studentsShowingFrom + index}</td>
                           <td style={{ fontWeight: 600 }}>{std.fullName}</td>
                           <td>
-                            <div style={{ fontWeight: 500 }}>{std.email}</div>
-                            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{std.mobile}</div>
+                            <div className="admin-table-primary">{std.email}</div>
+                            <div className="admin-table-secondary">{std.mobile}</div>
                           </td>
                           <td>
                             <div>{formatDob(std.dob)}</div>
-                            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{std.gender}</div>
+                            <div className="admin-table-secondary">{std.gender}</div>
                           </td>
                           <td>
-                            <code style={{ background: '#f1f5f9', padding: '3px 6px', borderRadius: '4px', fontSize: '12px' }}>
-                              {std.aadhaar}
-                            </code>
+                            <code className="admin-table-code">{std.aadhaar}</code>
                           </td>
                           <td>{std.college}</td>
                           <td>
-                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#0369a1' }}>{std.studentStatus}</div>
-                            <div style={{ fontSize: '11px', color: '#475569', marginTop: '2px' }}>{std.workStatus}</div>
+                            <div className="admin-table-primary admin-table-primary--accent">{std.studentStatus}</div>
+                            <div className="admin-table-secondary">{std.workStatus}</div>
+                          </td>
+                          <td>
+                            {std.paymentStatus === 'paid' ? (
+                              <span className="status-badge active">Yes</span>
+                            ) : std.paymentStatus === 'pending' ? (
+                              <span className="status-badge pending">Pending</span>
+                            ) : (
+                              <span className="status-badge expired">No</span>
+                            )}
                           </td>
                           <td>
                             {std.quizAttended ? (
                               <div>
-                                <span className="status-badge active" style={{ marginBottom: '6px', display: 'inline-block' }}>
-                                  Attended
-                                </span>
-                                <div style={{ fontSize: '12px', color: '#475569', marginTop: '4px' }}>
+                                <span className="status-badge active">Attended</span>
+                                <div className="admin-table-secondary" style={{ marginTop: '6px' }}>
                                   <strong>{std.quizProgram}</strong>
                                 </div>
                                 {std.quizScore != null && std.quizTotalQuestions != null && (
-                                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                                  <div className="admin-table-secondary">
                                     Score: {std.quizScore}/{std.quizTotalQuestions}
-                                  </div>
-                                )}
-                                {std.quizAttemptedAt && (
-                                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
-                                    {formatDateTime(std.quizAttemptedAt)}
                                   </div>
                                 )}
                               </div>
@@ -1476,11 +2104,18 @@ export default function Dashboard() {
                               <span className="status-badge expired">Not Attempted</span>
                             )}
                           </td>
-                          <td>{formatDateTime(std.registeredAt)}</td>
                           <td>
+                            <div>{formatDateTime(std.registeredAt)}</div>
+                            {std.quizAttemptedAt && (
+                              <div className="admin-table-secondary">Quiz: {formatDateTime(std.quizAttemptedAt)}</div>
+                            )}
+                          </td>
+                          <td className="admin-table-col-actions">
                             <button
+                              type="button"
                               onClick={() => handleDeleteStudent(std.id)}
-                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                              disabled={deletingStudentId === std.id}
+                              className="admin-table-delete-btn"
                               title="Delete student record"
                             >
                               <Trash2 size={16} />
@@ -1488,9 +2123,9 @@ export default function Dashboard() {
                           </td>
                         </tr>
                       ))}
-                      {filteredStudents.length === 0 && (
+                      {!isStudentsLoading && registeredStudents.length === 0 && (
                         <tr>
-                          <td colSpan={9} style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
+                          <td colSpan={11} className="admin-table-empty">
                             No registered students match the search criteria.
                           </td>
                         </tr>
@@ -1500,36 +2135,62 @@ export default function Dashboard() {
                 </div>
 
                 {/* Pagination Controls */}
-                {filteredStudents.length > 0 && (
-                  <div className="pagination-container">
-                    <div>
-                      Showing <strong>{Math.min(filteredStudents.length, (studentsPage - 1) * studentsPageSize + 1)}</strong> to{' '}
-                      <strong>{Math.min(filteredStudents.length, studentsPage * studentsPageSize)}</strong> of{' '}
-                      <strong>{filteredStudents.length}</strong> entries
+                {totalStudents > 0 && (
+                  <div className="pagination-container pagination-container--enhanced">
+                    <div className="pagination-summary">
+                      Showing <strong>{studentsShowingFrom}</strong>–<strong>{studentsShowingTo}</strong> of{' '}
+                      <strong>{totalStudents}</strong> students
+                      <span className="pagination-page-label"> · Page {studentsPage} of {totalStudentsPages}</span>
                     </div>
                     <div className="pagination-buttons">
                       <button
+                        type="button"
                         className="pagination-btn"
-                        onClick={() => setStudentsPage(prev => Math.max(1, prev - 1))}
-                        disabled={studentsPage === 1}
+                        onClick={() => setStudentsPage(1)}
+                        disabled={studentsPage === 1 || isStudentsLoading}
+                        title="First page"
+                      >
+                        «
+                      </button>
+                      <button
+                        type="button"
+                        className="pagination-btn"
+                        onClick={() => setStudentsPage((prev) => Math.max(1, prev - 1))}
+                        disabled={studentsPage === 1 || isStudentsLoading}
                       >
                         Previous
                       </button>
-                      {Array.from({ length: totalStudentsPages }, (_, i) => i + 1).map(pNum => (
-                        <button
-                          key={pNum}
-                          className={`pagination-btn ${studentsPage === pNum ? 'active' : ''}`}
-                          onClick={() => setStudentsPage(pNum)}
-                        >
-                          {pNum}
-                        </button>
-                      ))}
+                      {studentPageNumbers.map((pNum, idx) =>
+                        pNum === 'ellipsis' ? (
+                          <span key={`ellipsis-${idx}`} className="pagination-ellipsis">…</span>
+                        ) : (
+                          <button
+                            key={pNum}
+                            type="button"
+                            className={`pagination-btn ${studentsPage === pNum ? 'active' : ''}`}
+                            onClick={() => setStudentsPage(pNum)}
+                            disabled={isStudentsLoading}
+                          >
+                            {pNum}
+                          </button>
+                        )
+                      )}
                       <button
+                        type="button"
                         className="pagination-btn"
-                        onClick={() => setStudentsPage(prev => Math.min(totalStudentsPages, prev + 1))}
-                        disabled={studentsPage === totalStudentsPages}
+                        onClick={() => setStudentsPage((prev) => Math.min(totalStudentsPages, prev + 1))}
+                        disabled={studentsPage === totalStudentsPages || isStudentsLoading}
                       >
                         Next
+                      </button>
+                      <button
+                        type="button"
+                        className="pagination-btn"
+                        onClick={() => setStudentsPage(totalStudentsPages)}
+                        disabled={studentsPage === totalStudentsPages || isStudentsLoading}
+                        title="Last page"
+                      >
+                        »
                       </button>
                     </div>
                   </div>
@@ -1834,6 +2495,167 @@ export default function Dashboard() {
                   })()}
                 </div>
               </div>
+            )}
+
+            {/* SUBTAB: PAYMENT REVIEWS */}
+            {adminSubTab === 'payments' && (
+              <AdminPaymentsPanel
+                payments={paymentSubmissions}
+                totalPayments={totalPayments}
+                paymentsPage={paymentsPage}
+                paymentStatusFilter={paymentStatusFilter}
+                isLoading={isPaymentsLoading}
+                reviewingId={reviewingPaymentId}
+                onFilterChange={setPaymentStatusFilter}
+                onPageChange={setPaymentsPage}
+                onApprove={handleApprovePayment}
+                onReject={handleRejectPayment}
+              />
+            )}
+
+            {/* SUBTAB 5: MANAGE SCHEDULE */}
+            {adminSubTab === 'schedule' && (
+              <div className="dash-grid-2 dash-grid-2--wide">
+                <div className="dash-card">
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CalendarDays style={{ color: '#0284c7' }} size={20} />
+                    Upload Training Schedule
+                  </h3>
+                  <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 20px' }}>
+                    Publish class dates and sessions to the student schedule calendar. Attach a PDF or image if needed.
+                  </p>
+
+                  <form onSubmit={handleUploadSchedule} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div className="register-form-group">
+                      <label htmlFor="schedTitle">Session Title *</label>
+                      <input
+                        id="schedTitle"
+                        type="text"
+                        placeholder="e.g. Week 1 — Introduction to SAP"
+                        value={scheduleTitle}
+                        onChange={(e) => setScheduleTitle(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="register-form-group">
+                      <label htmlFor="schedProgram">Training Program</label>
+                      <select
+                        id="schedProgram"
+                        value={scheduleProgram}
+                        onChange={(e) => setScheduleProgram(e.target.value)}
+                        style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                      >
+                        <option value="">All Programs</option>
+                        {Object.keys(activeQuestions).map((p) => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="dash-options-grid">
+                      <div className="register-form-group">
+                        <label htmlFor="schedStart">Start Date *</label>
+                        <input
+                          id="schedStart"
+                          type="date"
+                          value={scheduleStartDate}
+                          onChange={(e) => setScheduleStartDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="register-form-group">
+                        <label htmlFor="schedEnd">End Date</label>
+                        <input
+                          id="schedEnd"
+                          type="date"
+                          value={scheduleEndDate}
+                          onChange={(e) => setScheduleEndDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="register-form-group">
+                      <label htmlFor="schedDesc">Description</label>
+                      <textarea
+                        id="schedDesc"
+                        rows={2}
+                        placeholder="Session details, venue, timings..."
+                        value={scheduleDescription}
+                        onChange={(e) => setScheduleDescription(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="register-form-group">
+                      <label htmlFor="schedFile">Schedule File (PDF / Image)</label>
+                      <input
+                        id="schedFile"
+                        type="file"
+                        accept=".pdf,image/*"
+                        onChange={(e) => setScheduleFile(e.target.files?.[0] ?? null)}
+                      />
+                      {scheduleFile && (
+                        <span style={{ fontSize: '12px', color: '#64748b' }}>{scheduleFile.name}</span>
+                      )}
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isUploadingSchedule}
+                      className="btn btn-primary"
+                      style={{ background: '#0284c7', borderColor: '#0284c7', color: '#fff', width: 'fit-content' }}
+                    >
+                      {isUploadingSchedule ? 'Uploading...' : 'Publish Schedule'}
+                    </button>
+                  </form>
+                </div>
+
+                <div className="dash-card">
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px' }}>Published Schedules</h3>
+                  {adminScheduleEntries.length === 0 ? (
+                    <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '8px', border: '1px dashed #cbd5e1', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
+                      No schedule entries yet. Upload your first training session above.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '520px', overflowY: 'auto' }}>
+                      {adminScheduleEntries.map((entry) => (
+                        <div key={entry.id} style={{ padding: '16px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                            <div>
+                              <strong style={{ fontSize: '14px', display: 'block' }}>{entry.title}</strong>
+                              <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginTop: '4px' }}>
+                                {new Date(entry.startDate).toLocaleDateString('en-IN')}
+                                {entry.endDate && entry.endDate !== entry.startDate && ` — ${new Date(entry.endDate).toLocaleDateString('en-IN')}`}
+                              </span>
+                              {entry.program && (
+                                <span style={{ fontSize: '11px', color: '#0284c7', fontWeight: 600, display: 'inline-block', marginTop: '6px' }}>{entry.program}</span>
+                              )}
+                              {entry.description && (
+                                <p style={{ fontSize: '13px', color: '#64748b', margin: '8px 0 0' }}>{entry.description}</p>
+                              )}
+                              {entry.fileUrl && (
+                                <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: '#16a34a', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
+                                  <FilePlus size={12} /> {entry.fileName || 'View file'}
+                                </a>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSchedule(entry.id)}
+                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', flexShrink: 0 }}
+                              title="Delete schedule entry"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {adminSubTab === 'support' && (
+              <AdminSupportPanel />
             )}
           </div>
         )}

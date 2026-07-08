@@ -1,5 +1,13 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'https://api.erphubtechnologies.in/api';
 
+export function getUploadUrl(uploadPath: string): string {
+  if (uploadPath.startsWith('http://') || uploadPath.startsWith('https://')) {
+    return uploadPath;
+  }
+  const base = API_BASE.replace(/\/api\/?$/, '');
+  return `${base}${uploadPath.startsWith('/') ? uploadPath : `/${uploadPath}`}`;
+}
+
 export interface AuthUser {
   id: string;
   fullName: string;
@@ -43,19 +51,65 @@ export function getAuthUser(): AuthUser | null {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
+  const hasBody = options.body != null && options.body !== '';
+
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   };
+
+  // Only set JSON content-type when sending a body (avoids DELETE/GET auth issues on some servers)
+  if (hasBody && !headers['Content-Type'] && !headers['content-type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  const data = await res.json();
+
+  let data: { message?: string };
+  try {
+    data = await res.json();
+  } catch {
+    const err = new Error(`Request failed (${res.status})`) as Error & { status?: number };
+    err.status = res.status;
+    throw err;
+  }
 
   if (!res.ok) {
-    throw new Error(data.message || 'Request failed');
+    const err = new Error(data.message || `Request failed (${res.status})`) as Error & { status?: number };
+    err.status = res.status;
+    throw err;
   }
   return data as T;
+}
+
+async function uploadRequest<T>(path: string, formData: FormData, method = 'POST'): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}${path}`, { method, headers, body: formData });
+
+  let data: { message?: string };
+  try {
+    data = await res.json();
+  } catch {
+    const err = new Error(`Request failed (${res.status})`) as Error & { status?: number };
+    err.status = res.status;
+    throw err;
+  }
+
+  if (!res.ok) {
+    const err = new Error(data.message || `Request failed (${res.status})`) as Error & { status?: number };
+    err.status = res.status;
+    throw err;
+  }
+  return data as T;
+}
+
+export function isAuthError(err: unknown): boolean {
+  const status = (err as { status?: number })?.status;
+  return status === 401 || status === 403;
 }
 
 export interface RegisterPayload {
@@ -118,17 +172,202 @@ export const authApi = {
   me: () => request<{ success: boolean; user: AuthUser }>('/auth/me'),
 };
 
+export interface StudentProgress {
+  paymentStatus: 'unpaid' | 'pending' | 'paid';
+  paymentAmount: number | null;
+  paymentPaidAt: string | null;
+  enrolledProgram: string | null;
+  scholarshipCodeUsed: string | null;
+  quizCompleted: boolean;
+  quizProgram: string | null;
+  quizScore: number | null;
+  scholarship: {
+    active: boolean;
+    code: string | null;
+    expiresAt: string | null;
+  };
+  pricing: {
+    standard: number;
+    scholarship: number;
+    applicable: number;
+  };
+  modules: { id: number; title: string; duration: string; description: string }[];
+  certificationEligible: boolean;
+  modulesUnlocked: boolean;
+  paymentSubmission?: {
+    status: 'pending' | 'approved' | 'rejected';
+    submittedAt: string;
+    billingName?: string;
+    billingEmail?: string;
+    billingAddress?: string;
+    transactionId?: string;
+    amount?: number;
+    useScholarship?: boolean;
+    rejectionReason?: string;
+  } | null;
+}
+
+export interface ScheduleEntry {
+  id: string;
+  title: string;
+  description?: string;
+  program?: string;
+  startDate: string;
+  endDate?: string;
+  fileUrl?: string;
+  fileName?: string;
+  uploadedAt: string;
+}
+
+export interface PaymentSubmitPayload {
+  billingName: string;
+  billingEmail: string;
+  billingAddress: string;
+  mobile: string;
+  transactionId: string;
+  useScholarship: boolean;
+  amount: number;
+  notes?: string;
+  screenshot: File;
+}
+
+export interface PaymentSubmissionRecord {
+  id: string;
+  userId: string;
+  studentName: string;
+  studentEmail: string;
+  studentMobile: string;
+  billingName: string;
+  billingEmail: string;
+  billingAddress: string;
+  mobile: string;
+  transactionId: string;
+  amount: number;
+  useScholarship: boolean;
+  program: string;
+  notes: string | null;
+  screenshotUrl: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedAt: string;
+  reviewedAt: string | null;
+  rejectionReason: string | null;
+}
+
+export interface SupportRequestRecord {
+  id: string;
+  userId: string;
+  studentName?: string;
+  studentEmail?: string;
+  studentMobile?: string;
+  category: string;
+  subject: string;
+  message: string;
+  status: 'pending' | 'resolved';
+  createdAt: string;
+  updatedAt: string;
+}
+
+
+export const studentApi = {
+  getProgress: () =>
+    request<{ success: boolean; progress: StudentProgress }>('/student/progress'),
+
+  confirmPayment: (useScholarship: boolean) =>
+    request<{ success: boolean; message: string }>('/student/payment/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ useScholarship }),
+    }),
+
+  submitPayment: (payload: PaymentSubmitPayload) => {
+    const formData = new FormData();
+    formData.append('billingName', payload.billingName);
+    formData.append('billingEmail', payload.billingEmail);
+    formData.append('billingAddress', payload.billingAddress);
+    formData.append('mobile', payload.mobile);
+    formData.append('transactionId', payload.transactionId);
+    formData.append('useScholarship', String(payload.useScholarship));
+    formData.append('amount', String(payload.amount));
+    if (payload.notes) formData.append('notes', payload.notes);
+    formData.append('screenshot', payload.screenshot);
+    return uploadRequest<{ success: boolean; message: string }>('/student/payment/submit', formData);
+  },
+
+  getSchedule: () =>
+    request<{ success: boolean; data: ScheduleEntry[] }>('/student/schedule'),
+
+  getSupportRequests: () =>
+    request<{ success: boolean; data: SupportRequestRecord[] }>('/student/support'),
+
+  submitSupportRequest: (category: string, subject: string, message: string) =>
+    request<{ success: boolean; message: string; data: SupportRequestRecord }>('/student/support', {
+      method: 'POST',
+      body: JSON.stringify({ category, subject, message }),
+    }),
+};
+
 export const adminApi = {
-  getStudents: (search = '', page = 1) =>
-    request<{ success: boolean; data: Record<string, unknown>[]; pagination: { total: number } }>(
-      `/admin/students?search=${encodeURIComponent(search)}&page=${page}&limit=100`
-    ),
+  getStudents: (search = '', page = 1, limit = 10) =>
+    request<{
+      success: boolean;
+      data: Record<string, unknown>[];
+      pagination: { total: number; page: number; limit: number; totalPages: number };
+    }>(`/admin/students?search=${encodeURIComponent(search)}&page=${page}&limit=${limit}`),
 
   deleteStudent: (id: string) =>
     request<{ success: boolean }>(`/admin/students/${id}`, { method: 'DELETE' }),
 
   getStats: () =>
-    request<{ success: boolean; stats: { totalStudents: number; totalAttempts: number } }>('/admin/stats'),
+    request<{ success: boolean; stats: { totalStudents: number; totalAttempts: number; pendingPayments?: number } }>('/admin/stats'),
+
+  getPayments: (status = 'pending', page = 1, limit = 10) =>
+    request<{
+      success: boolean;
+      data: PaymentSubmissionRecord[];
+      pagination: { total: number; page: number; limit: number; pages: number; totalPages: number };
+    }>(`/admin/payments?status=${encodeURIComponent(status)}&page=${page}&limit=${limit}`),
+
+  approvePayment: (id: string) =>
+    request<{ success: boolean; message: string }>(`/admin/payments/${id}/approve`, { method: 'POST' }),
+
+  rejectPayment: (id: string, reason?: string) =>
+    request<{ success: boolean; message: string }>(`/admin/payments/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
+  getSchedule: () =>
+    request<{ success: boolean; data: ScheduleEntry[] }>('/admin/schedule'),
+
+  uploadSchedule: (payload: {
+    title: string;
+    description?: string;
+    program?: string;
+    startDate: string;
+    endDate?: string;
+    file?: File;
+  }) => {
+    const formData = new FormData();
+    formData.append('title', payload.title);
+    if (payload.description) formData.append('description', payload.description);
+    if (payload.program) formData.append('program', payload.program);
+    formData.append('startDate', payload.startDate);
+    if (payload.endDate) formData.append('endDate', payload.endDate);
+    if (payload.file) formData.append('file', payload.file);
+    return uploadRequest<{ success: boolean; message: string }>('/admin/schedule', formData);
+  },
+
+  deleteSchedule: (id: string) =>
+    request<{ success: boolean }>(`/admin/schedule/${id}`, { method: 'DELETE' }),
+
+  getSupportRequests: (status = 'all', page = 1, limit = 10) =>
+    request<{
+      success: boolean;
+      data: SupportRequestRecord[];
+      pagination: { total: number; page: number; limit: number; pages: number; totalPages: number };
+    }>(`/admin/support?status=${encodeURIComponent(status)}&page=${page}&limit=${limit}`),
+
+  resolveSupportRequest: (id: string) =>
+    request<{ success: boolean; message: string }>(`/admin/support/${id}/resolve`, { method: 'POST' }),
 };
 
 export const quizApi = {
@@ -141,18 +380,44 @@ export const quizApi = {
     ),
 
   submitAttempt: (program: string, answers: Record<number, number>) =>
-    request<{ success: boolean; attempt: Record<string, unknown>; result: { correct: number; wrong: number; scorePercent: number; couponCode: string; generatedTime: string } }>(
+    request<{
+      success: boolean;
+      attempt: Record<string, unknown>;
+      result: {
+        correct: number;
+        wrong: number;
+        scorePercent: number;
+        couponCode: string | null;
+        generatedTime: string;
+        scholarshipEarned: boolean;
+        attemptCount: number;
+        maxAttempts: number;
+        canRetake: boolean;
+        passPercentRequired: number;
+      };
+    }>(
       '/quiz/attempts',
       { method: 'POST', body: JSON.stringify({ program, answers }) }
     ),
 
-  getAttempts: (program = 'All', page = 1) =>
-    request<{ success: boolean; data: Record<string, unknown>[] }>(
-      `/quiz/attempts?program=${encodeURIComponent(program)}&page=${page}&limit=100`
-    ),
+  getAttempts: (program = 'All', page = 1, limit = 10) =>
+    request<{
+      success: boolean;
+      data: Record<string, unknown>[];
+      pagination: { total: number; page: number; limit: number; pages: number; totalPages?: number };
+    }>(`/quiz/attempts?program=${encodeURIComponent(program)}&page=${page}&limit=${limit}`),
 
   getLatestAttempt: () =>
-    request<{ success: boolean; attempt: Record<string, unknown> | null }>('/quiz/attempts/me/latest'),
+    request<{
+      success: boolean;
+      attempt: Record<string, unknown> | null;
+      passingAttempt: Record<string, unknown> | null;
+      attemptCount: number;
+      maxAttempts: number;
+      canRetake: boolean;
+      scholarshipEarned: boolean;
+      passPercentRequired: number;
+    }>('/quiz/attempts/me/latest'),
 
   getAdminQuestions: () =>
     request<{ success: boolean; data: Record<string, { id: number; questionText: string; options: string[]; correctIndex: number }[]> }>(

@@ -5976,6 +5976,59 @@ a {
   box-shadow: 0 0 0 2px #0f172a;
 }
 
+.dash-quiz-selection-panel {
+  padding-bottom: 96px;
+}
+
+.dash-floating-start-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  border: none;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.dash-floating-start-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.42);
+}
+
+.dash-floating-start-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
+}
+
+.dash-floating-start-btn svg {
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .dash-floating-start-btn {
+    left: 20px;
+    right: 20px;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    justify-content: center;
+    width: auto;
+  }
+
+  .dash-quiz-selection-panel {
+    padding-bottom: 112px;
+  }
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;
@@ -6012,6 +6065,11 @@ a {
 .status-badge.expired {
   background: #fee2e2;
   color: #ef4444;
+}
+
+.status-badge.pending {
+  background: #fef3c7;
+  color: #d97706;
 }
 
 /* Pagination Styling */
@@ -6055,6 +6113,132 @@ a {
   color: #94a3b8;
   border-color: #e2e8f0;
   cursor: not-allowed;
+}
+
+.pagination-container--enhanced {
+  gap: 16px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 8px;
+}
+
+.pagination-summary {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.pagination-page-label {
+  color: #94a3b8;
+}
+
+.pagination-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.admin-students-table-wrap.is-loading {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.admin-table--students thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+  white-space: nowrap;
+}
+
+.admin-table--students tbody tr:hover {
+  background: #f8fafc;
+}
+
+.admin-table-col-num {
+  width: 48px;
+  color: #94a3b8 !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+}
+
+.admin-table-col-actions {
+  width: 64px;
+  text-align: center !important;
+}
+
+.admin-table-primary {
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.admin-table-primary--accent {
+  color: #0369a1;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.admin-table-secondary {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.admin-table-code {
+  background: #f1f5f9;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.admin-table-empty {
+  text-align: center !important;
+  padding: 32px 24px !important;
+  color: #94a3b8 !important;
+}
+
+.admin-table-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff;
+  color: #ef4444;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.admin-table-delete-btn:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.admin-table-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-students-table-wrap {
+  max-height: 620px;
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.admin-students-table-wrap .admin-table {
+  margin-top: 0;
+}
+
+@media (max-width: 768px) {
+  .pagination-page-label {
+    display: block;
+    margin-top: 2px;
+  }
 }
 
 .register-form-group {
@@ -6116,4 +6300,1084 @@ a {
 /* --- SIDEP Marquee Track Pause --- */
 .sidep-marquee-container:hover .sidep-marquee-track {
   animation-play-state: paused;
+}
+
+/* --- Payment Page --- */
+.payment-page-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.payment-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.payment-section-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.payment-section-subtitle {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.payment-method-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  color: #0284c7;
+}
+
+.payment-status-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.payment-status-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.payment-status-icon--success {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.payment-status-icon--pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.payment-status-icon--error {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.payment-info-box {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.payment-info-label {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.payment-info-value {
+  display: block;
+  font-size: 18px;
+  margin-top: 4px;
+}
+
+.payment-info-value--sm {
+  font-size: 14px;
+}
+
+.payment-fee-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.payment-fee-option {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.payment-fee-option.selected {
+  border-color: #0f172a;
+  background: #f8fafc;
+}
+
+.payment-fee-option.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.payment-fee-option input {
+  margin-top: 4px;
+  accent-color: #0f172a;
+}
+
+.payment-fee-label {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.payment-fee-amount {
+  display: block;
+  font-size: 22px;
+  font-weight: 900;
+  color: #0f172a;
+  margin: 4px 0;
+}
+
+.payment-scholarship-code {
+  display: inline-block;
+  background: #0f172a;
+  color: #ffb800;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.payment-expiry {
+  display: block;
+  font-size: 11px;
+  color: #ef4444;
+  margin-top: 4px;
+}
+
+.payment-pay-amount {
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 14px;
+  color: #475569;
+}
+
+.payment-bank-details {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.payment-bank-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.payment-bank-row span {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.payment-bank-row strong {
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.payment-copy-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.payment-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.payment-copy-btn:hover {
+  background: #f1f5f9;
+}
+
+.payment-upi-body {
+  text-align: center;
+}
+
+.payment-upi-qr {
+  width: 100%;
+  max-width: 280px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin: 0 auto 12px;
+  display: block;
+}
+
+.payment-upi-id {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  color: #475569;
+  margin: 0 0 8px;
+}
+
+.payment-upi-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.payment-form-card {
+  position: sticky;
+  top: 20px;
+}
+
+.payment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.payment-form-error {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.payment-upload-zone {
+  position: relative;
+}
+
+.payment-file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.payment-upload-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #64748b;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.payment-upload-label:hover {
+  border-color: #0f172a;
+  background: #f8fafc;
+}
+
+.payment-screenshot-preview {
+  margin-top: 12px;
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.payment-submit-btn {
+  background: #0f172a !important;
+  border-color: #0f172a !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  padding: 14px !important;
+}
+
+.payment-submission-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.payment-submission-summary div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.payment-submission-summary span {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.payment-submission-summary strong {
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.payment-pending-card {
+  border-left: 4px solid #d97706;
+}
+
+.payment-rejected-card {
+  border-left: 4px solid #ef4444;
+}
+
+/* --- Schedule Calendar --- */
+.schedule-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.schedule-header-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.schedule-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.schedule-calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.schedule-nav-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  color: #0f172a;
+}
+
+.schedule-nav-btn:hover {
+  background: #f1f5f9;
+}
+
+.schedule-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.schedule-calendar-weekdays span {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  padding: 8px 0;
+}
+
+.schedule-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 13px;
+  position: relative;
+  min-height: 40px;
+}
+
+.schedule-day--empty {
+  visibility: hidden;
+}
+
+.schedule-day--today {
+  background: #e0f2fe;
+  font-weight: 800;
+  color: #0284c7;
+}
+
+.schedule-day--has-event {
+  background: #f0fdf4;
+}
+
+.schedule-day-num {
+  line-height: 1;
+}
+
+.schedule-day-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #16a34a;
+  margin-top: 3px;
+}
+
+.schedule-list-title {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.schedule-event-card {
+  margin-bottom: 12px;
+}
+
+.schedule-event-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.schedule-event-title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.schedule-event-program {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0284c7;
+  background: #e0f2fe;
+  padding: 3px 8px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+
+.schedule-event-desc {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.schedule-download-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #16a34a;
+  text-decoration: none;
+}
+
+.schedule-download-link:hover {
+  text-decoration: underline;
+}
+
+.schedule-empty {
+  text-align: center;
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.schedule-empty p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  max-width: 360px;
+}
+
+@media (max-width: 1024px) {
+  .payment-page-grid,
+  .schedule-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-form-card {
+    position: static;
+  }
+}
+
+@media (max-width: 480px) {
+  .schedule-calendar-grid {
+    gap: 2px;
+  }
+
+  .schedule-day {
+    min-height: 32px;
+    font-size: 11px;
+  }
+}
+
+/* --- Admin Payment Reviews --- */
+.payment-admin-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: #64748b;
+}
+
+.payment-admin-empty p {
+  margin: 12px 0 0;
+}
+
+.payment-admin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.payment-admin-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  background: #fff;
+}
+
+.payment-admin-card--pending {
+  border-left: 4px solid #d97706;
+}
+
+.payment-admin-card--approved {
+  border-left: 4px solid #16a34a;
+}
+
+.payment-admin-card--rejected {
+  border-left: 4px solid #ef4444;
+}
+
+.payment-admin-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.payment-admin-student {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.payment-admin-meta {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.payment-admin-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.payment-admin-details div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.payment-admin-details span {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.payment-admin-details strong {
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.payment-admin-address {
+  grid-column: 1 / -1;
+}
+
+.payment-admin-screenshot {
+  margin-bottom: 16px;
+}
+
+.payment-admin-screenshot-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.payment-admin-screenshot-img {
+  max-width: 100%;
+  max-height: 280px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.payment-admin-screenshot-img:hover {
+  opacity: 0.9;
+}
+
+.payment-admin-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.payment-admin-approve-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.payment-admin-approve-btn:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.payment-admin-approve-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.payment-admin-reject-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #fff;
+  color: #ef4444;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.payment-admin-reject-btn:hover:not(:disabled) {
+  background: #fee2e2;
+}
+
+.payment-admin-reject-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.payment-admin-reject-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.payment-admin-reject-btns {
+  display: flex;
+  gap: 10px;
+}
+
+.payment-admin-reject-cancel {
+  padding: 8px 16px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.payment-admin-reject-confirm {
+  padding: 8px 16px;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.payment-admin-rejection-note {
+  margin: 0;
+  font-size: 13px;
+  color: #ef4444;
+  background: #fee2e2;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+.payment-admin-approved-note {
+  margin: 0;
+  font-size: 13px;
+  color: #16a34a;
+  background: #dcfce7;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+/* --- Admin Payment Reviews Table View --- */
+.admin-payments-table-wrap {
+  margin-top: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow-x: auto;
+  background: #fff;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+.admin-payments-table-wrap .admin-table {
+  min-width: 1000px;
+  margin-top: 0;
+}
+
+.admin-payments-table-wrap th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+  padding: 14px 16px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.admin-payments-table-wrap td {
+  padding: 16px;
+  vertical-align: top;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.payment-admin-table-student-name {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.payment-admin-table-student-meta {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.payment-admin-table-course {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.payment-admin-table-amount {
+  font-size: 13px;
+  color: #0284c7;
+  font-weight: 700;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.payment-admin-table-scholarship-badge {
+  font-size: 10px;
+  color: #d97706;
+  background: #fef3c7;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.payment-admin-table-tx-id {
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.payment-admin-table-date {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.payment-admin-table-billing-name {
+  font-weight: 600;
+  color: #334155;
+  font-size: 13px;
+}
+
+.payment-admin-table-billing-email {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.payment-admin-table-billing-address {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+  max-width: 220px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.payment-admin-table-billing-note {
+  font-size: 12px;
+  color: #b45309;
+  margin-top: 6px;
+  font-style: italic;
+  max-width: 220px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.payment-admin-table-proof-img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.payment-admin-table-proof-img:hover {
+  opacity: 0.9;
+  transform: scale(1.05);
+}
+
+.payment-admin-actions-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.payment-admin-table-btn-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.payment-admin-table-btn-approve {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.payment-admin-table-btn-approve:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.payment-admin-table-btn-reject {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #fff;
+  color: #ef4444;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.payment-admin-table-btn-reject:hover:not(:disabled) {
+  background: #fee2e2;
+}
+
+.payment-admin-table-reject-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #f8fafc;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  margin-top: 4px;
+  width: 180px;
+}
+
+.payment-admin-table-reject-textarea {
+  font-size: 12px;
+  padding: 6px;
+  width: 100%;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  resize: vertical;
+}
+
+.payment-admin-table-reject-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.payment-admin-table-btn-cancel {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  cursor: pointer;
+}
+
+.payment-admin-table-btn-confirm-reject {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: none;
+  background: #ef4444;
+  color: #fff;
+  cursor: pointer;
+}
+
+.payment-admin-table-rejection-note {
+  font-size: 12px;
+  color: #ef4444;
+  background: #fee2e2;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-top: 4px;
+  word-break: break-word;
+  max-width: 220px;
+}
+
+.payment-admin-table-approved-note {
+  font-size: 12px;
+  color: #16a34a;
+  background: #dcfce7;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-top: 4px;
+  word-break: break-word;
+  max-width: 220px;
+}
+
+/* --- Student Certification Tab --- */
+.certificate-card-wrapper {
+  position: relative;
+  max-width: 520px;
+  margin: 0 auto 24px;
+}
+
+.certificate-card-blurred {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+  border-radius: 16px;
+  padding: 32px;
+  color: #fff;
+  border: 2px solid #FFB800;
+  filter: blur(6px);
+  user-select: none;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.certificate-lock-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 16px;
+  color: #fff;
+  z-index: 10;
+}
+
+.certificate-lock-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 184, 0, 0.2);
+  border: 2px solid #FFB800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFB800;
+  margin-bottom: 12px;
+  box-shadow: 0 0 15px rgba(255, 184, 0, 0.4);
+  animation: pulseLock 2s infinite alternate;
+}
+
+.certificate-lock-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  margin: 0;
+}
+
+.certificate-lock-subtitle {
+  font-size: 13px;
+  color: #cbd5e1;
+  margin-top: 4px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes pulseLock {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 15px rgba(255, 184, 0, 0.4);
+  }
+  100% {
+    transform: scale(1.08);
+    box-shadow: 0 0 25px rgba(255, 184, 0, 0.7);
+  }
 }
