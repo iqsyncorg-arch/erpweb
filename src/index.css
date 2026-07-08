@@ -5588,6 +5588,12 @@ a {
   font-size: 14px;
 }
 
+.dash-details-grid strong {
+  display: block;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
 .dash-alert-banner {
   margin-top: 32px;
   background: #fffbeb;
