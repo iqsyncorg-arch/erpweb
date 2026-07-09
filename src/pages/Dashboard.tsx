@@ -37,6 +37,7 @@ import {
   setAuth,
   clearAuth,
   isAuthError,
+  getUploadUrl,
   type AuthUser,
   type StudentProgress,
   type PaymentSubmissionRecord,
@@ -2632,7 +2633,7 @@ export default function Dashboard() {
                                 <p style={{ fontSize: '13px', color: '#64748b', margin: '8px 0 0' }}>{entry.description}</p>
                               )}
                               {entry.fileUrl && (
-                                <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: '#16a34a', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
+                                <a href={getUploadUrl(entry.fileUrl)} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: '#16a34a', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
                                   <FilePlus size={12} /> {entry.fileName || 'View file'}
                                 </a>
                               )}

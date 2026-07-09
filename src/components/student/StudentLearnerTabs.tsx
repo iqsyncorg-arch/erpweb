@@ -14,6 +14,7 @@ import {
   Upload,
 } from 'lucide-react';
 import type { ScheduleEntry } from '../../api/client';
+import { getUploadUrl } from '../../api/client';
 
 export interface ProgramModule {
   id: number;
@@ -729,7 +730,7 @@ export function StudentScheduleTab({
                   {entry.program && <span className="schedule-event-program">{entry.program}</span>}
                   {entry.description && <p className="schedule-event-desc">{entry.description}</p>}
                   {entry.fileUrl && (
-                    <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer" className="schedule-download-link">
+                    <a href={getUploadUrl(entry.fileUrl)} target="_blank" rel="noopener noreferrer" className="schedule-download-link">
                       <Download size={14} />
                       {entry.fileName || 'Download schedule file'}
                     </a>
